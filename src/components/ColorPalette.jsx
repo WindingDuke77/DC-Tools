@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Navbar from './Navbar'
 import Footer from './Footer'
+import { RackPreview, ServerPreview, CablePreview } from './RackViewer'
 
 // --- Color helpers ---
 function hexToHsl(hex) {
@@ -260,7 +261,7 @@ export default function ColorPalette() {
   // --- Share ---
   const shareUrl = useMemo(() => {
     const base = window.location.origin + window.location.pathname
-    return `${base}?p=${encodePreset(state)}`
+    return `${base}#/tools/color-palette?p=${encodePreset(state)}`
   }, [state])
 
   const [linkCopied, setLinkCopied] = useState(false)
@@ -315,9 +316,24 @@ export default function ColorPalette() {
         </p>
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* SVG Preview */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-            <RackSVG rack={colors.rack} cable={colors.cable} server={colors.server} />
+          {/* 3D Previews — 2×2 grid, rack spans left column */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4" style={{ gridTemplateRows: '1fr 1fr' }}>
+              <div className="row-span-2 flex flex-col">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Rack</p>
+                <div className="flex-1 min-h-0">
+                  <RackPreview color={colors.rack} height="100%" className="border border-gray-800 h-full" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Cable</p>
+                <CablePreview color={colors.cable} height="160px" className="border border-gray-800" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Server</p>
+                <ServerPreview type={state.type === 'custom' ? 'system' : state.type} color={colors.server} height="160px" className="border border-gray-800" />
+              </div>
+            </div>
           </div>
 
           {/* Controls */}

@@ -18,7 +18,14 @@ export default function Hero() {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <a
-            href="/#tools"
+            href="#/"
+            onClick={(e) => {
+              const el = document.getElementById('tools')
+              if (el) {
+                e.preventDefault()
+                el.scrollIntoView({ behavior: 'smooth' })
+              }
+            }}
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-3 rounded-xl transition-colors"
           >
             Explore Tools
