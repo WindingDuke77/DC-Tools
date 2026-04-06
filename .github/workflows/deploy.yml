@@ -28,7 +28,15 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - uses: actions/cache@v4
+        id: node-modules-cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
       - run: npm run build
 
       - uses: actions/configure-pages@v5
