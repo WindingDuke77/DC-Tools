@@ -15,6 +15,9 @@ export default function Footer() {
           <a href="https://store.steampowered.com/app/4170200/Data_Center" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
             Steam
           </a>
+          <a href="https://github.com/WindingDuke77/DC-Tools" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+            Contribute on GitHub
+          </a>
         </div>
       </div>
     </footer>
