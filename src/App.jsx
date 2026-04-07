@@ -1,7 +1,7 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
-import Home from './components/Home'
-import ColorPalette from './components/ColorPalette'
-import RackCalculator from './components/RackCalculator'
+import Home from './components/home/Home'
+import ColorPalette from './components/color-palette/ColorPalette'
+import RackCalculator from './components/rack-calculator/RackCalculator'
 import NotFound from './components/NotFound'
 
 function App() {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import Navbar from './Navbar'
-import Footer from './Footer'
+import Navbar from '../layout/Navbar'
+import Footer from '../layout/Footer'
 import { RackPreview, ServerPreview, CablePreview } from './RackViewer'
 
 // --- Color helpers ---
