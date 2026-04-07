@@ -1,5 +1,6 @@
 import {
   RACK_TOTAL_U, SWITCH_RESERVED_U, MODULE_PACK_SIZE, SFP_MODULE_OPTIONS,
+  RACK_7U_PER,
 } from './constants'
 
 export const num = (v) => Math.max(0, parseInt(v) || 0)
@@ -19,8 +20,22 @@ export function buildRack(servers, typeLabel, torU = SWITCH_RESERVED_U) {
 
 export function iopsToServers(iops) {
   if (iops <= 0) return { count7u: 0, count3u: 0 }
-  const count7u = Math.floor(iops / 12000)
-  const remaining = iops - count7u * 12000
-  const count3u = remaining > 0 ? Math.ceil(remaining / 5000) : 0
+
+  let count7u = 0, count3u = 0
+  let remaining = iops
+  let slot = 0 // 0..5 = 7U slots, 6 = 3U slot
+
+  while (remaining > 0) {
+    if (slot < RACK_7U_PER) {
+      count7u++
+      remaining -= 12000
+      slot++
+    } else {
+      count3u++
+      remaining -= 5000
+      slot = 0 // rack complete, start next
+    }
+  }
+
   return { count7u, count3u }
 }

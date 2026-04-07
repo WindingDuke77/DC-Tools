@@ -54,37 +54,52 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     const torU = fallbackEnabled ? 2 : SWITCH_RESERVED_U
     const serverU = RACK_TOTAL_U - torU
     const rackList = []
-    if (mixedRacks) {
-      const allSv = []
-      for (const t of SERVER_TYPES) {
-        for (let i = 0; i < servers[t.key].count7u; i++) allSv.push({ type: t.key, size: 7 })
-        for (let i = 0; i < servers[t.key].count3u; i++) allSv.push({ type: t.key, size: 3 })
+
+    // Build queue of servers needed per type
+    const typeQueue = SERVER_TYPES.map(t => ({
+      key: t.key, label: t.label,
+      rem7: servers[t.key].count7u, rem3: servers[t.key].count3u,
+    })).filter(g => g.rem7 > 0 || g.rem3 > 0)
+
+    let currentRack = null
+    let uLeft = 0
+
+    const pushRack = () => {
+      if (currentRack && currentRack.length > 0) {
+        const types = [...new Set(currentRack.map(s => s.type))]
+        const label = types.length > 1 ? 'Mixed' : (SERVER_TYPES.find(t => t.key === types[0])?.label ?? 'Mixed')
+        rackList.push(buildRack(currentRack, label, torU))
       }
-      let i7 = 0, i3 = 0
-      const sv7 = allSv.filter(s => s.size === 7), sv3 = allSv.filter(s => s.size === 3)
-      while (i7 < sv7.length || i3 < sv3.length) {
-        const rackSv = []
-        let uLeft = serverU
-        while (uLeft >= 7 && i7 < sv7.length) { rackSv.push(sv7[i7++]); uLeft -= 7 }
-        while (uLeft >= 3 && i3 < sv3.length) { rackSv.push(sv3[i3++]); uLeft -= 3 }
-        if (rackSv.length === 0) break
-        const types = [...new Set(rackSv.map(s => s.type))]
-        rackList.push(buildRack(rackSv, types.length > 1 ? 'Mixed' : (SERVER_TYPES.find(t => t.key === types[0])?.label ?? 'Mixed'), torU))
-      }
-    } else {
-      for (const t of SERVER_TYPES) {
-        let rem7 = servers[t.key].count7u, rem3 = servers[t.key].count3u
-        if (rem7 === 0 && rem3 === 0) continue
-        while (rem7 > 0 || rem3 > 0) {
-          const rackSv = []
-          let uLeft = serverU
-          while (uLeft >= 7 && rem7 > 0) { rackSv.push({ type: t.key, size: 7 }); rem7--; uLeft -= 7 }
-          while (uLeft >= 3 && rem3 > 0) { rackSv.push({ type: t.key, size: 3 }); rem3--; uLeft -= 3 }
-          if (rackSv.length === 0) break
-          rackList.push(buildRack(rackSv, t.label, torU))
+    }
+
+    const newRack = () => {
+      pushRack()
+      currentRack = []
+      uLeft = serverU
+    }
+
+    for (const g of typeQueue) {
+      // If not mixed racks, always start a new rack for a new type
+      if (!mixedRacks || currentRack === null) newRack()
+
+      while (g.rem7 > 0 || g.rem3 > 0) {
+        // Can we fit anything we need into the current rack?
+        const canFit7 = uLeft >= 7 && g.rem7 > 0
+        const canFit3 = uLeft >= 3 && g.rem3 > 0
+        if (!canFit7 && !canFit3) newRack()
+
+        if (uLeft >= 7 && g.rem7 > 0) {
+          currentRack.push({ type: g.key, size: 7 }); g.rem7--; uLeft -= 7
+          // If leftover fits a 3U and we have one, fill it
+          if (uLeft >= 3 && uLeft < 7 && g.rem3 > 0) {
+            currentRack.push({ type: g.key, size: 3 }); g.rem3--; uLeft -= 3
+          }
+        } else if (uLeft >= 3 && g.rem3 > 0) {
+          currentRack.push({ type: g.key, size: 3 }); g.rem3--; uLeft -= 3
         }
       }
     }
+    pushRack() // flush last rack
 
     // ── ToR Switches ──
     const torServerPorts = TOR_PORTS - 1
