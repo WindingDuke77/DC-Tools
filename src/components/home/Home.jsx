@@ -1,8 +1,8 @@
-import Navbar from './Navbar'
+import Navbar from '../layout/Navbar'
 import Hero from './Hero'
 import Screenshots from './Screenshots'
 import ToolsGrid from './ToolsGrid'
-import Footer from './Footer'
+import Footer from '../layout/Footer'
 
 export default function Home() {
   return (

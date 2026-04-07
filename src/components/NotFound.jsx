@@ -1,5 +1,5 @@
-import Navbar from './Navbar'
-import Footer from './Footer'
+import Navbar from './layout/Navbar'
+import Footer from './layout/Footer'
 
 export default function NotFound() {
   return (
