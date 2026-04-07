@@ -21,7 +21,7 @@ const tools = [
   {
     title: 'Rack Calculator',
     description: 'Calculate the number of racks, servers, and switches needed from IOPS requirements.',
-    icon: '🖩',
+    icon: '🖥',
     link: '#/tools/rack-calculator',
   },
 ]
