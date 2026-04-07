@@ -18,7 +18,12 @@ const tools = [
     icon: '🎨',
     link: '#/tools/color-palette',
   },
-
+  {
+    title: 'Rack Calculator',
+    description: 'Calculate the number of racks, servers, and switches needed from IOPS requirements.',
+    icon: '🖩',
+    link: '#/tools/rack-calculator',
+  },
 ]
 
 export default function ToolsGrid() {
