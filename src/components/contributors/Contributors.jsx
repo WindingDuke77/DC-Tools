@@ -47,32 +47,34 @@ function ContributorCard({ name, handle, avatar, role, contribution }) {
 
 export default function Contributors() {
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen flex flex-col bg-gray-950 text-gray-100">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 className="text-4xl font-bold mb-12 text-center">Contributors</h1>
+      <div className="flex-1">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <h1 className="text-4xl font-bold mb-12 text-center">Contributors</h1>
 
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6 text-indigo-400">
-            Developers
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {developers.map((c) => (
-              <ContributorCard key={c.name} {...c} />
-            ))}
-          </div>
-        </section>
+          <section className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6 text-indigo-400">
+              Developers
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {developers.map((c) => (
+                <ContributorCard key={c.name} {...c} />
+              ))}
+            </div>
+          </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-6 text-indigo-400">
-            Idea Smiths
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {ideaSmiths.map((c) => (
-              <ContributorCard key={c.name} {...c} />
-            ))}
-          </div>
-        </section>
+          <section>
+            <h2 className="text-2xl font-semibold mb-6 text-indigo-400">
+              Idea Smiths
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {ideaSmiths.map((c) => (
+                <ContributorCard key={c.name} {...c} />
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
       <Footer />
     </div>

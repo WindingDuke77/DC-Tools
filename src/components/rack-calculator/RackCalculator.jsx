@@ -425,60 +425,7 @@ export default function RackCalculator() {
           </div>
         </section>
 
-        {/* ════════════════════════════════════════ */}
-        {/*  SAVE SETUP / SHARE                     */}
-        {/* ════════════════════════════════════════ */}
-        <section className="mb-10">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Save Setup or Share</h2>
-          <p className="text-xs text-gray-500 mb-4">Save locally or share a link to your setup.</p>
-          <div className="flex flex-wrap gap-3 mb-4">
-            <input type="text" placeholder="Setup name…" value={offerName} onChange={e => setOfferName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveOffer()}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-500 w-48" />
-            <button onClick={saveOffer}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              Save
-            </button>
-            <div className="relative">
-              <button onClick={shareConfig}
-                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                Copy Share Link
-              </button>
-              {shareToast && (
-                <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                  Copied!
-                </span>
-              )}
-            </div>
-          </div>
-          {savedOffers.length > 0 && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-800 text-left">
-                    <th className="px-4 py-3 text-gray-400 font-medium">Name</th>
-                    <th className="px-4 py-3 text-gray-400 font-medium">Saved</th>
-                    <th className="px-4 py-3 text-gray-400 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {savedOffers.map((offer, i) => (
-                    <tr key={i}>
-                      <td className="px-4 py-2 text-gray-300">{offer.name}</td>
-                      <td className="px-4 py-2 text-gray-500 text-xs">{new Date(offer.savedAt).toLocaleString()}</td>
-                      <td className="px-4 py-2 text-right">
-                        <button onClick={() => loadOffer(offer)}
-                          className="text-indigo-400 hover:text-indigo-300 text-xs font-medium mr-3 transition-colors">Load</button>
-                        <button onClick={() => deleteOffer(i)}
-                          className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+
 
 
         {/* ════════════════════════════════════════ */}
