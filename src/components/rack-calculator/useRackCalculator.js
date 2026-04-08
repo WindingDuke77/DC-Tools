@@ -274,7 +274,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
     if (selectedGw) {
       topoCols.push({
         key: 'gw', label: 'Gateway', color: '#06b6d4', bg: '#083344',
-        nodes: [{ id: 'gw_1', label: selectedGw.label, sub: selectedGw.desc }]
+        nodes: [{ id: 'gw_1', label: selectedGw.label }]
       })
     }
     if (!skipCoreSwitch) {

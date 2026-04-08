@@ -21,9 +21,23 @@ export default function Navbar() {
                 el.scrollIntoView({ behavior: 'smooth' })
               }
             }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition-colors"
+            className="hover:text-gray-100 transition-colors"
           >
             Tools
+          </a>
+          <a
+            href="#/contributors"
+            className="hover:text-gray-100 transition-colors"
+          >
+            Contributors
+          </a>
+          <a
+            href="https://github.com/WindingDuke77/DC-Tools"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition-colors"
+          >
+            GitHub
           </a>
         </div>
       </div>

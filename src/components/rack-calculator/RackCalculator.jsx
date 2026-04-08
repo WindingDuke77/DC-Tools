@@ -9,6 +9,7 @@ import {
 } from './constants'
 import { num, ceilToPack, iopsToServers } from './helpers'
 import { MiniRack, RackDetail, SLOT_COLORS } from './RackVisuals'
+import CustomerPresetModal from './CustomerPresetModal'
 import TopologyDiagram from './TopologyDiagram'
 import useRackCalculator from './useRackCalculator'
 
@@ -21,6 +22,12 @@ export default function RackCalculator() {
   const [mixedRacks, setMixedRacks] = useState(false)
   const [dedicatedNetworkRack, setDedicatedNetworkRack] = useState(false)
   const [moduleTypes, setModuleTypes] = useState({ gwToCore: 'sfp_10g_smf' })
+
+  // ── Customer Presets ──
+  const [customers, setCustomers] = useState([])
+  const [presetOpen, setPresetOpen] = useState(false)
+  const [presetSearch, setPresetSearch] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
 
   const [selectedRack, setSelectedRack] = useState(null)
   const [savedOffers, setSavedOffers] = useState([])
@@ -55,6 +62,43 @@ export default function RackCalculator() {
     } catch { /* ignore corrupt data */ }
   }, [])
 
+  // Fetch customer presets
+  useEffect(() => {
+    fetch('/DC-Tools/companies.json')
+      .then(r => r.json())
+      .then(data => {
+        // Patch image paths to include /DC-Tools
+        setCustomers(data.map(c => ({
+          ...c,
+          image: c.image ? `/DC-Tools${c.image}` : ''
+        })))
+      })
+      .catch(() => {})
+  }, [])
+
+  const SWITCH_TO_GATEWAY = { '4 Port': 'small', '4 + 16 Port': 'medium', '32 Port': 'large' }
+
+  const applyCustomer = (customer) => {
+    const reqs = customer.requirements
+    setIopsInputs({
+      system: reqs.system.iops ? String(reqs.system.iops) : '',
+      risc: reqs.risc.iops ? String(reqs.risc.iops) : '',
+      mainframe: reqs.mainframe.iops ? String(reqs.mainframe.iops) : '',
+      gpu: reqs.gpu.iops ? String(reqs.gpu.iops) : '',
+    })
+    if (customer.switch && SWITCH_TO_GATEWAY[customer.switch]) {
+      setGatewayType(SWITCH_TO_GATEWAY[customer.switch])
+    }
+    setSelectedCustomer(customer)
+    setPresetOpen(false)
+    setPresetSearch('')
+    setSelectedRack(null)
+  }
+
+  const filteredCustomers = customers.filter(c =>
+    c.name.toLowerCase().includes(presetSearch.toLowerCase())
+  )
+
   // Init from ?cfg= URL param
   useEffect(() => {
     const cfgParam = searchParams.get('cfg')
@@ -72,11 +116,31 @@ export default function RackCalculator() {
   }
 
   const saveOffer = () => {
-    const name = offerName.trim() || `Offer ${savedOffers.length + 1}`
+    const name = offerName.trim() || `Design ${savedOffers.length + 1}`
+    // Check for existing offer with same name
+    const existingIdx = savedOffers.findIndex(o => o.name === name)
     const offer = { name, config: getConfig(), savedAt: new Date().toISOString() }
-    persistOffers([...savedOffers, offer])
-    setOfferName('')
+    if (existingIdx !== -1) {
+      // Do not override by default, require explicit override
+      setPendingOverride({ offer, idx: existingIdx })
+    } else {
+      persistOffers([...savedOffers, offer])
+      setOfferName('')
+    }
   }
+
+  // State for override confirmation
+  const [pendingOverride, setPendingOverride] = useState(null)
+  const confirmOverride = () => {
+    if (pendingOverride) {
+      const offers = [...savedOffers]
+      offers[pendingOverride.idx] = pendingOverride.offer
+      persistOffers(offers)
+      setOfferName('')
+      setPendingOverride(null)
+    }
+  }
+  const cancelOverride = () => setPendingOverride(null)
 
   const loadOffer = (offer) => applyConfig(offer.config)
 
@@ -117,6 +181,142 @@ export default function RackCalculator() {
           Plan server hardware, rack layouts, network topology, and generate a shopping list.
           Flow: Customer Gateway &rarr; Core Switch &rarr; Aggregation Switch &rarr; Top of Rack Switch &rarr; Servers
         </p>
+
+        {/* ════════════════════════════════════════ */}
+        {/*  CUSTOMER PRESET & SAVE/SHARE MERGED   */}
+        {/* ════════════════════════════════════════ */}
+        {(customers.length > 0) && (
+          <section className="mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex items-center gap-4">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Customer Preset &amp; Setup</h2>
+                {selectedCustomer && (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    {selectedCustomer && (() => {
+                      const iconMap = {
+                        'Bermuda Triangle Backup': 'Bermuda Triangle Backup.png',
+                        'Dad Joke Database': 'Dad Joke Database.png',
+                        'UFO Download Station': 'UFO Download Station.png',
+                        'TaxHaven Holdings': 'TaxHeaven.png',
+                        'FakeNews Daily': 'FakeNews Daily.png',
+                        'Pollution Plus': 'Pollution Plus.png',
+                        'ClimateChange Industries': 'ClimateChange Industries.png',
+                        'Probability Manufacturing': 'Probability Manufacturing.png',
+                        'Counterfeit Good Distribution': 'Counterfeit Goods Distribution.png',
+                        'Madeep': 'Madeep.png',
+                        'Flat Earth Servers': 'Flat Earth Servers.png',
+                        'Wealth Track': 'WealthTrack.png',
+                        'Union Busters': 'Union Busterers.png',
+                        'Esistential Crisis Cloud': 'Existential Crisis Cloud.png',
+                        'Ludus': 'RandR.png',
+                        'Healtcare Denial': 'Healthcare Denial.png',
+                        'Student Hub': 'StudentHub.png',
+                        'Houseplant Emotional Support': 'Houseplant Emotional Support.png',
+                        'SockFetish Digital': 'SockFetish Digital.png',
+                        'Midlife Crisis Consulting': 'Midlife Crisis Consulting.png',
+                        'SimpeHub Premium': 'SimpeHub Premium.png',
+                        'Motivational Sloth Network': 'Motivational Sloth Network.png',
+                        'RoboticsHub': 'RoboticsHub.png',
+                        'Make Mie': 'MAkeMie.png',
+                        'Aero Dynasty': 'AeroDynasty.png',
+                        'Standard': 'Standard.png',
+                        'Richards and Richards': 'RandR.png',
+                        'Dewey Chaeatm': 'DeweyCheatem.png',
+                        'AeroSpace': 'Aerospace.png',
+                        'Bull and Bearly': 'Bull and bearly.png',
+                        'Waseku': 'Waseku.png',
+                        'Sweatshop Effieciency': 'Sweatshop Efficiency.png',
+                        'Pyramid Power': 'Pyramid Power.png',
+                        'EvilCorp': 'EvilCorp.png',
+                      }
+                      const iconFile = iconMap[selectedCustomer.name] || selectedCustomer.image?.replace(/^.*[\\/]/, '')
+                      return iconFile ? (
+                        <img src={`/DC-Tools/customer-icons/${iconFile}`} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500" />
+                      ) : null
+                    })()}
+                    <span>Active: <strong className="text-white">{selectedCustomer.name}</strong></span>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setPresetOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                Load Customer Preset
+              </button>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4">
+              <input type="text" placeholder="Setup name…" value={offerName} onChange={e => setOfferName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveOffer()}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-500 w-48" />
+              <button onClick={saveOffer}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                Save
+              </button>
+              <div className="relative">
+                <button onClick={shareConfig}
+                  className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                  Copy Share Link
+                </button>
+                {shareToast && (
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                    Copied!
+                  </span>
+                )}
+              </div>
+            </div>
+            {savedOffers.length > 0 && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-4 max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-left">
+                      <th className="px-4 py-3 text-gray-400 font-medium">Name</th>
+                      <th className="px-4 py-3 text-gray-400 font-medium">Saved</th>
+                      <th className="px-4 py-3 text-gray-400 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {savedOffers.map((offer, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-2 text-gray-300">{offer.name}</td>
+                        <td className="px-4 py-2 text-gray-500 text-xs">{new Date(offer.savedAt).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-right">
+                          <button onClick={() => loadOffer(offer)}
+                            className="text-indigo-400 hover:text-indigo-300 text-xs font-medium mr-3 transition-colors">Load</button>
+                          <button onClick={() => deleteOffer(i)}
+                            className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">Delete</button>
+                          <button onClick={() => setPendingOverride({ offer: { ...offer, config: getConfig(), savedAt: new Date().toISOString() }, idx: i })}
+                            className="ml-2 text-yellow-400 hover:text-yellow-300 text-xs font-medium transition-colors">Override</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Override confirmation modal */}
+            {pendingOverride && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-sm w-full text-center">
+                  <h3 className="text-lg font-semibold text-white mb-2">Override Saved Setup?</h3>
+                  <p className="text-gray-300 mb-4">A setup named <span className="font-bold text-yellow-300">{pendingOverride.offer.name}</span> already exists. Do you want to override it?</p>
+                  <div className="flex justify-center gap-4">
+                    <button onClick={confirmOverride} className="bg-yellow-500 hover:bg-yellow-400 text-white font-medium px-4 py-2 rounded-lg transition-colors">Override</button>
+                    <button onClick={cancelOverride} className="bg-gray-700 hover:bg-gray-600 text-white font-medium px-4 py-2 rounded-lg transition-colors">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <CustomerPresetModal
+              open={presetOpen}
+              customers={customers}
+              search={presetSearch}
+              setSearch={setPresetSearch}
+              selectedCustomer={selectedCustomer}
+              onSelect={applyCustomer}
+              onClose={() => { setPresetOpen(false); setPresetSearch('') }}
+            />
+          </section>
+        )}
 
         {/* ════════════════════════════════════════ */}
         {/*  SERVER INPUTS                          */}

@@ -1,0 +1,852 @@
+[
+  {
+    "id": 1,
+    "name": "Bermuda Triangle Backup",
+    "switch": "4 Port",
+    "rep": 0,
+    "image": "/customer-icons/Bermuda Triangle Backup.png",
+    "requirements": {
+      "system": {
+        "iops": 40000,
+        "usable_ips": 13
+      },
+      "risc": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 2,
+    "name": "Dad Joke Database",
+    "switch": "4 Port",
+    "rep": 10,
+    "image": "/customer-icons/Dad Joke Database.png",
+    "requirements": {
+      "system": {
+        "iops": 80000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 3,
+    "name": "UFO Download Station",
+    "switch": "4 Port",
+    "rep": 20,
+    "image": "/customer-icons/UFO Download Station.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 4,
+    "name": "TaxHaven Holdings",
+    "switch": "4 Port",
+    "rep": 30,
+    "image": "/customer-icons/TaxHaven Holdings.png",
+    "requirements": {
+      "system": {
+        "iops": 120000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 5,
+    "name": "FakeNews Daily",
+    "switch": "4 Port",
+    "rep": 40,
+    "image": "/customer-icons/FakeNews Daily.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 50000,
+        "usable_ips": 13
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 6,
+    "name": "Pollution Plus",
+    "switch": "4 Port",
+    "rep": 50,
+    "image": "/customer-icons/Pollution Plus.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 70000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 7,
+    "name": "ClimateChange Industries",
+    "switch": "4 Port",
+    "rep": 60,
+    "image": "/customer-icons/ClimateChange Industries.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 90000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 0,
+        "usable_ips": 0
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 8,
+    "name": "Probability Manufacturing",
+    "switch": "4 Port",
+    "rep": 75,
+    "image": "/customer-icons/Probability Manufacturing.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 70000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 70000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 9,
+    "name": "Counterfeit Good Distribution",
+    "switch": "4 Port",
+    "rep": 90,
+    "image": "/customer-icons/Counterfeit Good Distribution.png",
+    "requirements": {
+      "system": {
+        "iops": 120000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 80000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 90000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 10,
+    "name": "Madeep",
+    "switch": "4 + 16 Port",
+    "rep": 110,
+    "image": "/customer-icons/Madeep.png",
+    "requirements": {
+      "system": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 110000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 11,
+    "name": "Flat Earth Servers",
+    "switch": "4 + 16 Port",
+    "rep": 135,
+    "image": "/customer-icons/Flat Earth Servers.png",
+    "requirements": {
+      "system": {
+        "iops": 160000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 230000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 130000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 0,
+        "usable_ips": 0
+      }
+    }
+  },
+  {
+    "id": 12,
+    "name": "Wealth Track",
+    "switch": "4 + 16 Port",
+    "rep": 165,
+    "image": "/customer-icons/Wealth Track.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 80000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 100000,
+        "usable_ips": 29
+      }
+    }
+  },
+  {
+    "id": 13,
+    "name": "Union Busters",
+    "switch": "4 + 16 Port",
+    "rep": 200,
+    "image": "/customer-icons/Union Busters.png",
+    "requirements": {
+      "system": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 100000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 250000,
+        "usable_ips": 61
+      },
+      "gpu": {
+        "iops": 100000,
+        "usable_ips": 29
+      }
+    }
+  },
+  {
+    "id": 14,
+    "name": "Esistential Crisis Cloud",
+    "switch": "4 + 16 Port",
+    "rep": 250,
+    "image": "/customer-icons/Esistential Crisis Cloud.png",
+    "requirements": {
+      "system": {
+        "iops": 120000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 120000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 120000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 270000,
+        "usable_ips": 61
+      }
+    }
+  },
+  {
+    "id": 15,
+    "name": "Ludus",
+    "switch": "4 + 16 Port",
+    "rep": 285,
+    "image": "/customer-icons/Ludus.png",
+    "requirements": {
+      "system": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 140000,
+        "usable_ips": 29
+      }
+    }
+  },
+  {
+    "id": 16,
+    "name": "Healtcare Denial",
+    "switch": "4 + 16 Port",
+    "rep": 340,
+    "image": "/customer-icons/Healtcare Denial.png",
+    "requirements": {
+      "system": {
+        "iops": 160000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 320000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 160000,
+        "usable_ips": 61
+      },
+      "gpu": {
+        "iops": 160000,
+        "usable_ips": 61
+      }
+    }
+  },
+  {
+    "id": 17,
+    "name": "Student Hub",
+    "switch": "32 Port",
+    "rep": 405,
+    "image": "/customer-icons/Student Hub.png",
+    "requirements": {
+      "system": {
+        "iops": 180000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 180000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 360000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 180000,
+        "usable_ips": 61
+      }
+    }
+  },
+  {
+    "id": 18,
+    "name": "Houseplant Emotional Support",
+    "switch": "32 Port",
+    "rep": 480,
+    "image": "/customer-icons/Houseplant Emotional Support.png",
+    "requirements": {
+      "system": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "gpu": {
+        "iops": 350000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 19,
+    "name": "SockFetish Digital",
+    "switch": "32 Port",
+    "rep": 570,
+    "image": "/customer-icons/SockFetish Digital.png",
+    "requirements": {
+      "system": {
+        "iops": 500000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "gpu": {
+        "iops": 100000,
+        "usable_ips": 29
+      }
+    }
+  },
+  {
+    "id": 20,
+    "name": "Midlife Crisis Consulting",
+    "switch": "32 Port",
+    "rep": 675,
+    "image": "/customer-icons/Midlife Crisis Consulting.png",
+    "requirements": {
+      "system": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 500000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "gpu": {
+        "iops": 120000,
+        "usable_ips": 29
+      }
+    }
+  },
+  {
+    "id": 21,
+    "name": "SimpeHub Premium",
+    "switch": "32 Port",
+    "rep": 800,
+    "image": "/customer-icons/SimpeHub Premium.png",
+    "requirements": {
+      "system": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "mainframe": {
+        "iops": 600000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 240000,
+        "usable_ips": 61
+      }
+    }
+  },
+  {
+    "id": 22,
+    "name": "Motivational Sloth Network",
+    "switch": "32 Port",
+    "rep": 950,
+    "image": "/customer-icons/Motivational Sloth Network.png",
+    "requirements": {
+      "system": {
+        "iops": 220000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 280000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 600000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 23,
+    "name": "RoboticsHub",
+    "switch": "32 Port",
+    "rep": 1120,
+    "image": "/customer-icons/RoboticsHub.png",
+    "requirements": {
+      "system": {
+        "iops": 440000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 320000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 320000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 320000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 24,
+    "name": "Make Mie",
+    "switch": "32 Port",
+    "rep": 1320,
+    "image": "/customer-icons/Make Mie.png",
+    "requirements": {
+      "system": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "risc": {
+        "iops": 670000,
+        "usable_ips": 253
+      },
+      "mainframe": {
+        "iops": 340000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 340000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 25,
+    "name": "Aero Dynasty",
+    "switch": "32 Port",
+    "rep": 1560,
+    "image": "/customer-icons/Aero Dynasty.png",
+    "requirements": {
+      "system": {
+        "iops": 250000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 350000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 640000,
+        "usable_ips": 253
+      },
+      "gpu": {
+        "iops": 350000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 26,
+    "name": "Standard",
+    "switch": "32 Port",
+    "rep": 1840,
+    "image": "/customer-icons/Standard.png",
+    "requirements": {
+      "system": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 400000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 660000,
+        "usable_ips": 253
+      }
+    }
+  },
+  {
+    "id": 27,
+    "name": "Richards and Richards",
+    "switch": "32 Port",
+    "rep": 2180,
+    "image": "/customer-icons/Richards and Richards.png",
+    "requirements": {
+      "system": {
+        "iops": 700000,
+        "usable_ips": 253
+      },
+      "risc": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 300000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 28,
+    "name": "Dewey Chaeatm",
+    "switch": "32 Port",
+    "rep": 2580,
+    "image": "/customer-icons/Dewey Chaeatm.png",
+    "requirements": {
+      "system": {
+        "iops": 300000,
+        "usable_ips": 0
+      },
+      "risc": {
+        "iops": 900000,
+        "usable_ips": 253
+      },
+      "mainframe": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 300000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 29,
+    "name": "AeroSpace",
+    "switch": "32 Port",
+    "rep": 3050,
+    "image": "/customer-icons/AeroSpace.png",
+    "requirements": {
+      "system": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 1040000,
+        "usable_ips": 253
+      },
+      "gpu": {
+        "iops": 300000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 30,
+    "name": "Bull and Bearly",
+    "switch": "32 Port",
+    "rep": 3600,
+    "image": "/customer-icons/Bull and Bearly.png",
+    "requirements": {
+      "system": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 800000,
+        "usable_ips": 253
+      }
+    }
+  },
+  {
+    "id": 31,
+    "name": "Waseku",
+    "switch": "32 Port",
+    "rep": 4250,
+    "image": "/customer-icons/Waseku.png",
+    "requirements": {
+      "system": {
+        "iops": 500000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 440000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 440000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 440000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 32,
+    "name": "Sweatshop Effieciency",
+    "switch": "32 Port",
+    "rep": 5020,
+    "image": "/customer-icons/Sweatshop Effieciency.png",
+    "requirements": {
+      "system": {
+        "iops": 360000,
+        "usable_ips": 125
+      },
+      "risc": {
+        "iops": 1000000,
+        "usable_ips": 253
+      },
+      "mainframe": {
+        "iops": 140000,
+        "usable_ips": 29
+      },
+      "gpu": {
+        "iops": 360000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 33,
+    "name": "Pyramid Power",
+    "switch": "32 Port",
+    "rep": 5930,
+    "image": "/customer-icons/Pyramid Power.png",
+    "requirements": {
+      "system": {
+        "iops": 240000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "mainframe": {
+        "iops": 1000000,
+        "usable_ips": 253
+      },
+      "gpu": {
+        "iops": 400000,
+        "usable_ips": 125
+      }
+    }
+  },
+  {
+    "id": 34,
+    "name": "EvilCorp",
+    "switch": "32 Port",
+    "rep": 7000,
+    "image": "/customer-icons/EvilCorp.png",
+    "requirements": {
+      "system": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "risc": {
+        "iops": 200000,
+        "usable_ips": 61
+      },
+      "mainframe": {
+        "iops": 300000,
+        "usable_ips": 125
+      },
+      "gpu": {
+        "iops": 1280000,
+        "usable_ips": 253
+      }
+    }
+  }
+]
