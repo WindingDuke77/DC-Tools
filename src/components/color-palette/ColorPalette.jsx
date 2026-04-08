@@ -34,21 +34,23 @@ function hslToHex(h, s, l) {
 
 function deriveRackCable(serverHex) {
   const [h, , l] = hexToHsl(serverHex)
+  const adjH = (h + 90) % 360
   return {
     rack: hslToHex(h, 100, Math.min(Math.max(l * 2, 40), 50)),
     cable: hslToHex(h, 100, Math.max(l * 0.5, 5)),
+    cableB: hslToHex(adjH, 100, Math.max(l * 0.5, 5)),
   }
 }
 
 // --- Preset server types (server body colour is fixed per type) ---
 const SERVER_PRESETS = {
-  system:    { label: 'System',    server: '#706501', rack: '#FFE401', cable: '#655A00' },
-  mainframe: { label: 'Mainframe', server: '#46001E', rack: '#CB0061', cable: '#310017' },
-  risc:      { label: 'RISC',      server: '#00012F', rack: '#0003CE', cable: '#000034' },
-  gpu:       { label: 'GPU',       server: '#004503', rack: '#00CF06', cable: '#003501' },
+  system:    { label: 'System',    server: '#706501', rack: '#FFE401', cable: '#655A00', cableB: '#005A00' },
+  mainframe: { label: 'Mainframe', server: '#46001E', rack: '#CB0061', cable: '#310017', cableB: '#312B00' },
+  risc:      { label: 'RISC',      server: '#00012F', rack: '#0003CE', cable: '#000034', cableB: '#1A0034' },
+  gpu:       { label: 'GPU',       server: '#004503', rack: '#00CF06', cable: '#003501', cableB: '#003435' },
 }
 
-const DEFAULT_STATE = { type: 'system', customServer: '#706501', customRack: '#FFE401', customCable: '#655A00' }
+const DEFAULT_STATE = { type: 'system', customServer: '#706501', customRack: '#FFE401', customCable: '#655A00', customCableB: '#005A00' }
 
 // --- localStorage helpers ---
 const STORAGE_KEY = 'dc-tools-palettes'
@@ -67,24 +69,31 @@ function persistSaved(list) {
 // Encode state for URL sharing
 function encodePreset(state) {
   if (state.type !== 'custom') return state.type
-  return `c:${state.customServer.slice(1)},${state.customRack.slice(1)},${state.customCable.slice(1)}`
+  return `c:${state.customServer.slice(1)},${state.customRack.slice(1)},${state.customCable.slice(1)},${state.customCableB.slice(1)}`
 }
 
 function decodePreset(str) {
   if (!str) return null
-  if (SERVER_PRESETS[str]) return { type: str, customServer: '#706501', customRack: '#FFE401', customCable: '#655A00' }
-  const m = str.match(/^c:([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6})$/)
-  if (m) return { type: 'custom', customServer: `#${m[1]}`, customRack: `#${m[2]}`, customCable: `#${m[3]}` }
+  if (SERVER_PRESETS[str]) return { type: str, customServer: '#706501', customRack: '#FFE401', customCable: '#655A00', customCableB: '#005A00' }
+  // Support new 4-color format
+  const m4 = str.match(/^c:([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6})$/)
+  if (m4) return { type: 'custom', customServer: `#${m4[1]}`, customRack: `#${m4[2]}`, customCable: `#${m4[3]}`, customCableB: `#${m4[4]}` }
+  // Legacy 3-color format
+  const m3 = str.match(/^c:([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6})$/)
+  if (m3) {
+    const derived = deriveRackCable(`#${m3[1]}`)
+    return { type: 'custom', customServer: `#${m3[1]}`, customRack: `#${m3[2]}`, customCable: `#${m3[3]}`, customCableB: derived.cableB }
+  }
   return null
 }
 
 // --- Resolve colours from state ---
 function resolveColors(state) {
   if (state.type === 'custom') {
-    return { server: state.customServer, rack: state.customRack, cable: state.customCable, label: 'Custom' }
+    return { server: state.customServer, rack: state.customRack, cable: state.customCable, cableB: state.customCableB, label: 'Custom' }
   }
   const p = SERVER_PRESETS[state.type]
-  return { server: p.server, rack: p.rack, cable: p.cable, label: p.label }
+  return { server: p.server, rack: p.rack, cable: p.cable, cableB: p.cableB, label: p.label }
 }
 
 // --- SVG: 20U rack, 3U server, 1U patch panel ---
@@ -243,7 +252,7 @@ export default function ColorPalette() {
   // Derive rack & cable from a base server colour
   const handleCustomBaseChange = useCallback((hex) => {
     const derived = deriveRackCable(hex)
-    setState((s) => ({ ...s, customServer: hex, customRack: derived.rack, customCable: derived.cable }))
+    setState((s) => ({ ...s, customServer: hex, customRack: derived.rack, customCable: derived.cable, customCableB: derived.cableB }))
   }, [])
 
   // Or let them tweak rack / cable independently
@@ -252,6 +261,9 @@ export default function ColorPalette() {
   }, [])
   const handleCableDirect = useCallback((hex) => {
     setState((s) => ({ ...s, customCable: hex }))
+  }, [])
+  const handleCableBDirect = useCallback((hex) => {
+    setState((s) => ({ ...s, customCableB: hex }))
   }, [])
 
   const selectPreset = useCallback((type) => {
@@ -296,9 +308,10 @@ export default function ColorPalette() {
   // --- Export text ---
   const handleExport = () => {
     const lines = [
-      `Server: ${colors.server.toUpperCase()}`,
-      `Rack:   ${colors.rack.toUpperCase()}`,
-      `Cable:  ${colors.cable.toUpperCase()}`,
+      `Server:  ${colors.server.toUpperCase()}`,
+      `Rack:    ${colors.rack.toUpperCase()}`,
+      `Cable A: ${colors.cable.toUpperCase()}`,
+      `Cable B: ${colors.cableB.toUpperCase()}`,
     ]
     navigator.clipboard.writeText(lines.join('\n'))
   }
@@ -318,7 +331,7 @@ export default function ColorPalette() {
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* 3D Previews — 2×2 grid, rack spans left column */}
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4" style={{ gridTemplateRows: '1fr 1fr' }}>
+            <div className="grid grid-cols-3 gap-4" style={{ gridTemplateRows: '1fr 1fr' }}>
               <div className="row-span-2 flex flex-col">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Rack</p>
                 <div className="flex-1 min-h-0">
@@ -326,13 +339,18 @@ export default function ColorPalette() {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Cable</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Cable A</p>
                 <CablePreview color={colors.cable} height="160px" className="border border-gray-800" />
               </div>
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Server</p>
                 <ServerPreview type={state.type === 'custom' ? 'system' : state.type} color={colors.server} height="160px" className="border border-gray-800" />
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">Cable B</p>
+                <CablePreview color={colors.cableB} height="160px" className="border border-gray-800" />
+              </div>
+              <div />
             </div>
           </div>
 
@@ -384,7 +402,7 @@ export default function ColorPalette() {
                     <div className="w-12 h-12 rounded-lg border-2 border-gray-600 hover:border-gray-400 transition-colors" style={{ backgroundColor: state.customServer }} />
                   </label>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Rack (override)</p>
                     <label className="relative cursor-pointer inline-block">
@@ -398,7 +416,7 @@ export default function ColorPalette() {
                     </label>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Cable (override)</p>
+                    <p className="text-xs text-gray-400 mb-1">Cable A (override)</p>
                     <label className="relative cursor-pointer inline-block">
                       <input
                         type="color"
@@ -409,6 +427,18 @@ export default function ColorPalette() {
                       <div className="w-10 h-10 rounded-lg border-2 border-gray-700 hover:border-gray-500 transition-colors" style={{ backgroundColor: state.customCable }} />
                     </label>
                   </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Cable B (override)</p>
+                    <label className="relative cursor-pointer inline-block">
+                      <input
+                        type="color"
+                        value={state.customCableB}
+                        onChange={(e) => handleCableBDirect(e.target.value)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="w-10 h-10 rounded-lg border-2 border-gray-700 hover:border-gray-500 transition-colors" style={{ backgroundColor: state.customCableB }} />
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -416,10 +446,11 @@ export default function ColorPalette() {
             {/* Derived colours display */}
             <div>
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Colours</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Swatch label="Server" value={colors.server} />
                 <Swatch label="Rack" value={colors.rack} />
-                <Swatch label="Cable" value={colors.cable} />
+                <Swatch label="Cable A" value={colors.cable} />
+                <Swatch label="Cable B" value={colors.cableB} />
               </div>
             </div>
 
@@ -471,6 +502,7 @@ export default function ColorPalette() {
                         <div className="flex gap-1">
                           <span className="w-4 h-4 rounded" style={{ backgroundColor: c.rack }} />
                           <span className="w-4 h-4 rounded" style={{ backgroundColor: c.cable }} />
+                          <span className="w-4 h-4 rounded" style={{ backgroundColor: c.cableB }} />
                         </div>
                         <span className="text-sm flex-1 truncate">{entry.name}</span>
                         <button
@@ -501,7 +533,8 @@ export default function ColorPalette() {
                     <th className="pb-2 pr-4">Type</th>
                     <th className="pb-2 pr-4">Server</th>
                     <th className="pb-2 pr-4">Rack</th>
-                    <th className="pb-2">Cable</th>
+                    <th className="pb-2 pr-4">Cable A</th>
+                    <th className="pb-2">Cable B</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-300">
@@ -516,9 +549,13 @@ export default function ColorPalette() {
                         <span className="inline-block w-3 h-3 rounded mr-1.5 align-middle" style={{ backgroundColor: t.rack }} />
                         {t.rack.toUpperCase()}
                       </td>
-                      <td className="py-2 font-mono text-xs">
+                      <td className="py-2 pr-4 font-mono text-xs">
                         <span className="inline-block w-3 h-3 rounded mr-1.5 align-middle" style={{ backgroundColor: t.cable }} />
                         {t.cable.toUpperCase()}
+                      </td>
+                      <td className="py-2 font-mono text-xs">
+                        <span className="inline-block w-3 h-3 rounded mr-1.5 align-middle" style={{ backgroundColor: t.cableB }} />
+                        {t.cableB.toUpperCase()}
                       </td>
                     </tr>
                   ))}
