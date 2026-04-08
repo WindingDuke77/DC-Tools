@@ -19,6 +19,12 @@ const tools = [
     link: '#/tools/color-palette',
   },
   {
+    title: 'Cable Palette Generator',
+    description: 'Generate rack and cable colour palettes — lock, randomize, and share like Coolors.',
+    icon: '🔌',
+    link: '#/tools/cable-generator',
+  },
+  {
     title: 'Rack Calculator',
     description: 'Calculate the number of racks, servers, and switches needed from IOPS requirements.',
     icon: '🖥',

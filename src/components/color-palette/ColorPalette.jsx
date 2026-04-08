@@ -37,20 +37,20 @@ function deriveRackCable(serverHex) {
   const adjH = (h + 90) % 360
   return {
     rack: hslToHex(h, 100, Math.min(Math.max(l * 2, 40), 50)),
-    cable: hslToHex(h, 100, Math.max(l * 0.5, 5)),
-    cableB: hslToHex(adjH, 100, Math.max(l * 0.5, 5)),
+    cable: hslToHex(h, 90, Math.min(Math.max(l * 1.2, 25), 40)),
+    cableB: hslToHex(adjH, 90, Math.min(Math.max(l * 1.2, 25), 40)),
   }
 }
 
 // --- Preset server types (server body colour is fixed per type) ---
 const SERVER_PRESETS = {
-  system:    { label: 'System',    server: '#706501', rack: '#FFE401', cable: '#655A00', cableB: '#005A00' },
-  mainframe: { label: 'Mainframe', server: '#46001E', rack: '#CB0061', cable: '#310017', cableB: '#312B00' },
-  risc:      { label: 'RISC',      server: '#00012F', rack: '#0003CE', cable: '#000034', cableB: '#1A0034' },
-  gpu:       { label: 'GPU',       server: '#004503', rack: '#00CF06', cable: '#003501', cableB: '#003435' },
+  system:    { label: 'System',    server: '#706501', rack: '#FFE401', cable: '#B89B0A', cableB: '#0AB832' },
+  mainframe: { label: 'Mainframe', server: '#46001E', rack: '#CB0061', cable: '#A31245', cableB: '#A37A12' },
+  risc:      { label: 'RISC',      server: '#00012F', rack: '#0003CE', cable: '#1228A3', cableB: '#7012A3' },
+  gpu:       { label: 'GPU',       server: '#004503', rack: '#00CF06', cable: '#12A31E', cableB: '#12A0A3' },
 }
 
-const DEFAULT_STATE = { type: 'system', customServer: '#706501', customRack: '#FFE401', customCable: '#655A00', customCableB: '#005A00' }
+const DEFAULT_STATE = { type: 'system', customServer: '#706501', customRack: '#FFE401', customCable: '#B89B0A', customCableB: '#0AB832' }
 
 // --- localStorage helpers ---
 const STORAGE_KEY = 'dc-tools-palettes'
@@ -74,7 +74,7 @@ function encodePreset(state) {
 
 function decodePreset(str) {
   if (!str) return null
-  if (SERVER_PRESETS[str]) return { type: str, customServer: '#706501', customRack: '#FFE401', customCable: '#655A00', customCableB: '#005A00' }
+  if (SERVER_PRESETS[str]) return { type: str, customServer: '#706501', customRack: '#FFE401', customCable: '#B89B0A', customCableB: '#0AB832' }
   // Support new 4-color format
   const m4 = str.match(/^c:([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6}),([0-9a-fA-F]{6})$/)
   if (m4) return { type: 'custom', customServer: `#${m4[1]}`, customRack: `#${m4[2]}`, customCable: `#${m4[3]}`, customCableB: `#${m4[4]}` }
