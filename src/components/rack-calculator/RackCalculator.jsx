@@ -16,7 +16,8 @@ export default function RackCalculator() {
   // ── State ──
   const [iopsInputs, setIopsInputs] = useState({ gpu: '', risc: '', system: '', mainframe: '' })
   const [gatewayType, setGatewayType] = useState("small")
-  const [fallbackEnabled, setFallbackEnabled] = useState(false)
+  const [redundancyEnabled, setRedundancyEnabled] = useState(false)
+  const [skipCoreSwitch, setSkipCoreSwitch] = useState(false)
   const [mixedRacks, setMixedRacks] = useState(false)
   const [dedicatedNetworkRack, setDedicatedNetworkRack] = useState(false)
   const [moduleTypes, setModuleTypes] = useState({ gwToCore: 'sfp_10g_smf' })
@@ -31,13 +32,15 @@ export default function RackCalculator() {
   const OFFERS_KEY = 'dc-tools-offers'
 
   const getConfig = useCallback(() => ({
-    iopsInputs, gatewayType, fallbackEnabled, mixedRacks, dedicatedNetworkRack, moduleTypes,
-  }), [iopsInputs, gatewayType, fallbackEnabled, mixedRacks, dedicatedNetworkRack, moduleTypes])
+    iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes,
+  }), [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes])
 
   const applyConfig = useCallback((cfg) => {
     if (cfg.iopsInputs) setIopsInputs(cfg.iopsInputs)
     if (cfg.gatewayType !== undefined) setGatewayType(cfg.gatewayType)
-    if (cfg.fallbackEnabled !== undefined) setFallbackEnabled(cfg.fallbackEnabled)
+    if (cfg.redundancyEnabled !== undefined) setRedundancyEnabled(cfg.redundancyEnabled)
+    else if (cfg.fallbackEnabled !== undefined) setRedundancyEnabled(cfg.fallbackEnabled)
+    if (cfg.skipCoreSwitch !== undefined) setSkipCoreSwitch(cfg.skipCoreSwitch)
     if (cfg.mixedRacks !== undefined) setMixedRacks(cfg.mixedRacks)
     if (cfg.dedicatedNetworkRack !== undefined) setDedicatedNetworkRack(cfg.dedicatedNetworkRack)
     if (cfg.moduleTypes) setModuleTypes(cfg.moduleTypes)
@@ -96,7 +99,7 @@ export default function RackCalculator() {
   const handleIOPS = (key, val) => setIopsInputs(p => ({ ...p, [key]: val.replace(/\D/g, '') }))
 
   // ── Calculations ──
-  const results = useRackCalculator({ iopsInputs, gatewayType, fallbackEnabled, mixedRacks, dedicatedNetworkRack, moduleTypes })
+  const results = useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes })
 
   // ═══════════════════════════════════════════════
   //  Render
@@ -187,11 +190,19 @@ export default function RackCalculator() {
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Options</h2>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
-              <input type="checkbox" checked={fallbackEnabled} onChange={e => setFallbackEnabled(e.target.checked)}
+              <input type="checkbox" checked={redundancyEnabled} onChange={e => setRedundancyEnabled(e.target.checked)}
                 className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-indigo-500 focus:ring-indigo-500" />
               <div>
-                <p className="font-medium text-sm">Fallback</p>
+                <p className="font-medium text-sm">Redundancy</p>
                 <p className="text-xs text-gray-500">Redundant connections: minimum 2 links at every layer</p>
+              </div>
+            </label>
+            <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
+              <input type="checkbox" checked={skipCoreSwitch} onChange={e => setSkipCoreSwitch(e.target.checked)}
+                className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-indigo-500 focus:ring-indigo-500" />
+              <div>
+                <p className="font-medium text-sm">Skip Core Switch</p>
+                <p className="text-xs text-gray-500">Gateway connects directly to Aggregation switches (no Core layer)</p>
               </div>
             </label>
             <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
@@ -426,12 +437,22 @@ export default function RackCalculator() {
                         <td className="px-4 py-2 text-right text-gray-400">{results.lagSummary.gwToCore.required.toFixed(2)} Gb/s</td>
                       </tr>
                     )}
+                    {results.lagSummary.gwToAgg && (
+                      <tr>
+                        <td className="px-4 py-2 text-gray-300">Gateway &rarr; Aggregation</td>
+                        <td className="px-4 py-2 text-right">{results.lagSummary.gwToAgg.links}</td>
+                        <td className="px-4 py-2 text-right font-bold">{results.lagSummary.gwToAgg.throughput}</td>
+                        <td className="px-4 py-2 text-right text-gray-400">{results.lagSummary.gwToAgg.required.toFixed(2)} Gb/s</td>
+                      </tr>
+                    )}
+                    {results.lagSummary.coreToAgg && (
                     <tr>
                       <td className="px-4 py-2 text-gray-300">Core &rarr; Aggregation</td>
                       <td className="px-4 py-2 text-right">{results.lagSummary.coreToAgg.links}</td>
                       <td className="px-4 py-2 text-right font-bold">{results.lagSummary.coreToAgg.throughput}</td>
                       <td className="px-4 py-2 text-right text-gray-400">{results.lagSummary.coreToAgg.required.toFixed(2)} Gb/s</td>
                     </tr>
+                    )}
                     <tr>
                       <td className="px-4 py-2 text-gray-300">Aggregation &rarr; ToR</td>
                       <td className="px-4 py-2 text-right">{results.lagSummary.aggToTor.links}</td>
@@ -446,9 +467,9 @@ export default function RackCalculator() {
                     </tr>
                   </tbody>
                 </table>
-                {fallbackEnabled && (
+                {redundancyEnabled && (
                   <div className="px-4 py-3 border-t border-gray-800 text-xs text-indigo-400">
-                    Fallback active &mdash; dual redundant paths: 2 ToRs per rack, 1 dedicated Agg per ToR, {results.totalCores} Core switches, {results.effectiveUplinks.gwToCore} GW links.
+                    Redundancy active &mdash; dual redundant paths: 2 ToRs per rack, 1 dedicated Agg per ToR, {results.totalCores} Core switches, {results.effectiveUplinks.gwToCore} GW links.
                   </div>
                 )}
               </div>
@@ -458,17 +479,8 @@ export default function RackCalculator() {
             <section>
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Switch & Device Breakdown</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {results.totalGateways > 0 && (
-                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-cyan-400 text-lg">&#9729;</span>
-                      <span className="font-medium text-sm">Customer Gateway</span>
-                    </div>
-                    <p className="text-2xl font-bold">1</p>
-                    <p className="text-xs text-gray-500">{results.selectedGateway.label}</p>
-                    <p className="text-xs text-gray-500">{results.selectedGateway.desc}</p>
-                  </div>
-                )}
+                
+                {results.totalCores > 0 && (
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-red-400 text-lg">&#9733;</span>
@@ -477,6 +489,7 @@ export default function RackCalculator() {
                   <p className="text-2xl font-bold">{results.totalCores}</p>
                   <p className="text-xs text-gray-500">{CORE_QSFP_PORTS} QSFP ports each</p>
                 </div>
+                )}
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-orange-400 text-lg">&#9670;</span>

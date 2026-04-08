@@ -27,8 +27,7 @@ export const GATEWAY_TYPES = [
 ]
 
 export const SFP_MODULE_OPTIONS = [
-  { key: 'sfp_10g_smf', label: '10Gb Single Mode Fibre', speed: 10 },
-  { key: 'sfp_25g_smf', label: '25Gb Single Mode Fibre', speed: 25 },
+
   { key: 'sfp_10g_eth', label: '10Gb Ethernet', speed: 10 },
 ]
 

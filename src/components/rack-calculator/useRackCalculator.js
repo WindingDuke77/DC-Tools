@@ -8,7 +8,7 @@ import {
 } from './constants'
 import { num, ceilToPack, getSfpSpeed, buildRack, iopsToServers } from './helpers'
 
-export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEnabled, mixedRacks, dedicatedNetworkRack, moduleTypes }) {
+export default function useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes }) {
   return useMemo(() => {
     // Convert IOPS to server counts
     const servers = {}
@@ -37,7 +37,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     let gwToCoreLinks = 1
     let gwMaxThroughput = 0
     let gwInsufficient = false
-    if (!fallbackEnabled) {
+    if (!redundancyEnabled) {
       coreToAggLinks = Math.max(1, Math.ceil(totalBandwidth / QSFP_SPEED))
       if (selectedGw) {
         const gwSpd = selectedGw.corePortType === 'sfp' ? getSfpSpeed(moduleTypes.gwToCore) : QSFP_SPEED
@@ -51,7 +51,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     }
 
     // ── Pack servers into racks ──
-    const torU = fallbackEnabled ? 2 : SWITCH_RESERVED_U
+    const torU = redundancyEnabled ? 2 : SWITCH_RESERVED_U
     const serverU = RACK_TOTAL_U - torU
     const rackList = []
 
@@ -105,12 +105,12 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     const torServerPorts = TOR_PORTS - 1
     const serversPerTor = torServerPorts > 0 ? torServerPorts : 1
     const baseTorsPerRack = rackList.map(r => serversPerTor > 0 ? Math.max(1, Math.ceil(r.totalServers / serversPerTor)) : 1)
-    const torsPerRack = fallbackEnabled ? baseTorsPerRack.map(t => t * 2) : baseTorsPerRack
+    const torsPerRack = redundancyEnabled ? baseTorsPerRack.map(t => t * 2) : baseTorsPerRack
     const totalTors = torsPerRack.reduce((s, t) => s + t, 0)
 
     // ── Aggregation Switches ──
     let torsPerAgg, totalAggs, aggsPerPath = 0
-    if (fallbackEnabled) {
+    if (redundancyEnabled) {
       torsPerAgg = AGG_SFP_PORTS
       const torsPerPath = Math.ceil(totalTors / 2)
       aggsPerPath = Math.max(1, Math.ceil(torsPerPath / torsPerAgg))
@@ -122,7 +122,19 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
 
     // ── Core Switches ──
     let totalCores
-    if (fallbackEnabled) {
+    let eff_gwToAgg = 0
+    if (skipCoreSwitch) {
+      totalCores = 0
+      // Gateway connects directly to agg switches
+      if (selectedGw) {
+        const gwSpd = selectedGw.corePortType === 'sfp' ? getSfpSpeed(moduleTypes.gwToCore) : QSFP_SPEED
+        gwToCoreLinks = 0
+        const gwToAggLinks = Math.min(Math.max(1, Math.ceil(totalBandwidth / gwSpd)), selectedGw.maxUplinks)
+        gwMaxThroughput = selectedGw.maxUplinks * gwSpd
+        gwInsufficient = gwMaxThroughput < totalBandwidth
+        eff_gwToAgg = gwToAggLinks
+      }
+    } else if (redundancyEnabled) {
       const aggsPerPath2 = Math.ceil(totalAggs / 2)
       const gwPortsPerCore = selectedGw ? 1 : 0
       const portsPerPath = aggsPerPath2 + gwPortsPerCore
@@ -139,11 +151,11 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     const eff = {
       torToServer: 1,
       aggToTor: 1,
-      coreToAgg: fallbackEnabled ? 1 : coreToAggLinks,
-      gwToCore: gwToCoreLinks,
+      coreToAgg: redundancyEnabled ? 1 : coreToAggLinks,
+      gwToCore: skipCoreSwitch ? 0 : gwToCoreLinks,
     }
 
-    if (fallbackEnabled && selectedGw && selectedGw.maxUplinks < totalCores) {
+    if (redundancyEnabled && selectedGw && selectedGw.maxUplinks < totalCores) {
       gwInsufficient = true
     }
 
@@ -185,15 +197,27 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     const modules = { sfp_10g_smf: 0, sfp_25g_smf: 0, sfp_10g_eth: 0, qsfp_40g_mmf: 0 }
     const aggToTorTotalLinks = totalTors * eff.aggToTor
     modules.sfp_10g_eth += aggToTorTotalLinks
-    const coreToAggTotalLinks = totalAggs * eff.coreToAgg
-    modules.qsfp_40g_mmf += coreToAggTotalLinks * 2
+    if (!skipCoreSwitch) {
+      const coreToAggTotalLinks = totalAggs * eff.coreToAgg
+      modules.qsfp_40g_mmf += coreToAggTotalLinks * 2
+    }
     if (selectedGw) {
-      const gwUp = Math.min(eff.gwToCore, selectedGw.maxUplinks)
-      if (selectedGw.corePortType === 'sfp') {
-        modules[moduleTypes.gwToCore] = (modules[moduleTypes.gwToCore] || 0) + gwUp
-        modules.qsfp_40g_mmf += gwUp
+      if (skipCoreSwitch) {
+        // Gateway connects directly to agg switches
+        const gwUp = Math.min(eff_gwToAgg, selectedGw.maxUplinks)
+        if (selectedGw.corePortType === 'sfp') {
+          modules[moduleTypes.gwToCore] = (modules[moduleTypes.gwToCore] || 0) + gwUp
+        } else {
+          modules.qsfp_40g_mmf += gwUp * 2
+        }
       } else {
-        modules.qsfp_40g_mmf += gwUp * 2
+        const gwUp = Math.min(eff.gwToCore, selectedGw.maxUplinks)
+        if (selectedGw.corePortType === 'sfp') {
+          modules[moduleTypes.gwToCore] = (modules[moduleTypes.gwToCore] || 0) + gwUp
+          modules.qsfp_40g_mmf += gwUp
+        } else {
+          modules.qsfp_40g_mmf += gwUp * 2
+        }
       }
     }
 
@@ -202,11 +226,17 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     const lagSummary = {
       torToServer: { links: eff.torToServer, speed: 'Ethernet', throughput: 'Ethernet (fixed per link)', required: maxRackBandwidth },
       aggToTor: { links: eff.aggToTor, speed: 10, throughput: `${eff.aggToTor} x 10Gb = ${eff.aggToTor * 10}Gb`, required: maxRackBandwidth },
-      coreToAgg: { links: eff.coreToAgg, speed: QSFP_SPEED, throughput: `${eff.coreToAgg} x ${QSFP_SPEED}Gb = ${eff.coreToAgg * QSFP_SPEED}Gb`, required: totalBandwidth },
+    }
+    if (!skipCoreSwitch) {
+      lagSummary.coreToAgg = { links: eff.coreToAgg, speed: QSFP_SPEED, throughput: `${eff.coreToAgg} x ${QSFP_SPEED}Gb = ${eff.coreToAgg * QSFP_SPEED}Gb`, required: totalBandwidth }
     }
     if (selectedGw) {
       const gwSpd = selectedGw.corePortType === 'sfp' ? getSfpSpeed(moduleTypes.gwToCore) : QSFP_SPEED
-      lagSummary.gwToCore = { links: eff.gwToCore, speed: gwSpd, throughput: `${eff.gwToCore} x ${gwSpd}Gb = ${eff.gwToCore * gwSpd}Gb`, required: totalBandwidth }
+      if (skipCoreSwitch) {
+        lagSummary.gwToAgg = { links: eff_gwToAgg, speed: gwSpd, throughput: `${eff_gwToAgg} x ${gwSpd}Gb = ${eff_gwToAgg * gwSpd}Gb`, required: totalBandwidth }
+      } else {
+        lagSummary.gwToCore = { links: eff.gwToCore, speed: gwSpd, throughput: `${eff.gwToCore} x ${gwSpd}Gb = ${eff.gwToCore * gwSpd}Gb`, required: totalBandwidth }
+      }
     }
 
     // ── IOPS ──
@@ -220,7 +250,9 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     }
     shoppingList.push({ item: 'Lanberg Rack Cabinet 19" 47U', qty: totalRacks, purchase: totalRacks, unitPrice: RACK_PRICE })
     if (selectedGw) shoppingList.push({ item: selectedGw.label, qty: 1, purchase: 1, unitPrice: GATEWAY_PRICES[selectedGw.key] || 0 })
-    shoppingList.push({ item: '32 x QSFP+', qty: totalCores, purchase: totalCores, unitPrice: SWITCH_PRICES.core })
+    if (!skipCoreSwitch) {
+      shoppingList.push({ item: '32 x QSFP+', qty: totalCores, purchase: totalCores, unitPrice: SWITCH_PRICES.core })
+    }
     shoppingList.push({ item: '4 x QSFP+ 16 x SFP+/SFP28', qty: totalAggs, purchase: totalAggs, unitPrice: SWITCH_PRICES.agg })
     shoppingList.push({ item: '16 x 10Gbps RJ45', qty: totalTors, purchase: totalTors, unitPrice: SWITCH_PRICES.tor })
     for (const mod of SFP_MODULE_OPTIONS) {
@@ -246,12 +278,14 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
         nodes: [{ id: 'gw_1', label: selectedGw.label, sub: selectedGw.desc }]
       })
     }
-    topoCols.push({
-      key: 'core', label: 'Core Switches', color: '#ef4444', bg: '#450a0a',
-      nodes: Array.from({ length: totalCores }, (_, i) => ({
-        id: `core_${i}`, label: `Core ${i + 1}`, sub: `${CORE_QSFP_PORTS} QSFP`
-      }))
-    })
+    if (!skipCoreSwitch) {
+      topoCols.push({
+        key: 'core', label: 'Core Switches', color: '#ef4444', bg: '#450a0a',
+        nodes: Array.from({ length: totalCores }, (_, i) => ({
+          id: `core_${i}`, label: `Core ${i + 1}`, sub: `${CORE_QSFP_PORTS} QSFP`
+        }))
+      })
+    }
     topoCols.push({
       key: 'agg', label: 'Agg Switches', color: '#f97316', bg: '#431407',
       nodes: Array.from({ length: totalAggs }, (_, i) => ({
@@ -259,7 +293,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
       }))
     })
     const torGroupNodes = []
-    if (fallbackEnabled && aggsPerPath > 0) {
+    if (redundancyEnabled && aggsPerPath > 0) {
       const torsPerPath = Math.ceil(totalTors / 2)
       let pathAssigned = 0
       for (let p = 0; p < aggsPerPath; p++) {
@@ -283,18 +317,25 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
     topoCols.push({ key: 'tor', label: 'ToR Switches', color: '#6b7280', bg: '#1f2937', nodes: torGroupNodes })
 
     if (selectedGw) {
-      for (let ci = 0; ci < totalCores; ci++) topoEdges.push({ from: 'gw_1', to: `core_${ci}`, color: '#06b6d4' })
+      if (skipCoreSwitch) {
+        // Gateway connects directly to agg switches
+        for (let ai = 0; ai < totalAggs; ai++) topoEdges.push({ from: 'gw_1', to: `agg_${ai}`, color: '#06b6d4' })
+      } else {
+        for (let ci = 0; ci < totalCores; ci++) topoEdges.push({ from: 'gw_1', to: `core_${ci}`, color: '#06b6d4' })
+      }
     }
-    if (fallbackEnabled && aggsPerPath > 0) {
-      const coresPerPath = Math.ceil(totalCores / 2)
-      for (let ai = 0; ai < aggsPerPath; ai++) {
-        topoEdges.push({ from: `core_${ai % coresPerPath}`, to: `agg_${ai}`, color: '#ef4444' })
+    if (!skipCoreSwitch) {
+      if (redundancyEnabled && aggsPerPath > 0) {
+        const coresPerPath = Math.ceil(totalCores / 2)
+        for (let ai = 0; ai < aggsPerPath; ai++) {
+          topoEdges.push({ from: `core_${ai % coresPerPath}`, to: `agg_${ai}`, color: '#ef4444' })
+        }
+        for (let ai = 0; ai < aggsPerPath; ai++) {
+          topoEdges.push({ from: `core_${coresPerPath + (ai % coresPerPath)}`, to: `agg_${ai + aggsPerPath}`, color: '#ef4444' })
+        }
+      } else {
+        for (let ai = 0; ai < totalAggs; ai++) topoEdges.push({ from: `core_${ai % totalCores}`, to: `agg_${ai}`, color: '#ef4444' })
       }
-      for (let ai = 0; ai < aggsPerPath; ai++) {
-        topoEdges.push({ from: `core_${coresPerPath + (ai % coresPerPath)}`, to: `agg_${ai + aggsPerPath}`, color: '#ef4444' })
-      }
-    } else {
-      for (let ai = 0; ai < totalAggs; ai++) topoEdges.push({ from: `core_${ai % totalCores}`, to: `agg_${ai}`, color: '#ef4444' })
     }
     for (const tg of torGroupNodes) {
       topoEdges.push({ from: `agg_${tg.aggA}`, to: tg.id, color: '#f97316' })
@@ -303,9 +344,15 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
 
     if (selectedGw) {
       const gwSpd = selectedGw.corePortType === 'sfp' ? getSfpSpeed(moduleTypes.gwToCore) : QSFP_SPEED
-      topoLagLabels.push({ label: `${eff.gwToCore}\u00d7 ${gwSpd}Gb = ${eff.gwToCore * gwSpd}Gb`, color: '#06b6d4' })
+      if (skipCoreSwitch) {
+        topoLagLabels.push({ label: `${eff_gwToAgg}\u00d7 ${gwSpd}Gb = ${eff_gwToAgg * gwSpd}Gb`, color: '#06b6d4' })
+      } else {
+        topoLagLabels.push({ label: `${eff.gwToCore}\u00d7 ${gwSpd}Gb = ${eff.gwToCore * gwSpd}Gb`, color: '#06b6d4' })
+      }
     }
-    topoLagLabels.push({ label: `${eff.coreToAgg}\u00d7 ${QSFP_SPEED}Gb = ${eff.coreToAgg * QSFP_SPEED}Gb`, color: '#ef4444' })
+    if (!skipCoreSwitch) {
+      topoLagLabels.push({ label: `${eff.coreToAgg}\u00d7 ${QSFP_SPEED}Gb = ${eff.coreToAgg * QSFP_SPEED}Gb`, color: '#ef4444' })
+    }
     topoLagLabels.push({ label: `${eff.aggToTor}\u00d7 10Gb = ${eff.aggToTor * 10}Gb`, color: '#f97316' })
 
     return {
@@ -320,5 +367,5 @@ export default function useRackCalculator({ iopsInputs, gatewayType, fallbackEna
       shoppingList, totalCost,
       topoData: { columns: topoCols, edges: topoEdges, lagLabels: topoLagLabels },
     }
-  }, [iopsInputs, gatewayType, fallbackEnabled, mixedRacks, dedicatedNetworkRack, moduleTypes])
+  }, [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes])
 }
