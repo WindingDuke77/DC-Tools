@@ -21,9 +21,9 @@ export const CORE_QSFP_PORTS = 32
 export const QSFP_SPEED = 40
 
 export const GATEWAY_TYPES = [
-  { key: 'small', label: 'Small Gateway', desc: '2 SFP + 2 Ethernet', maxUplinks: 2, corePortType: 'sfp' },
-  { key: 'medium', label: 'Medium Gateway', desc: '16 SFP + 4 QSFP', maxUplinks: 4, corePortType: 'qsfp' },
-  { key: 'large', label: 'Large Gateway', desc: '32 QSFP', maxUplinks: 32, corePortType: 'qsfp' },
+  { key: 'small', label: '2 SFP + 2 Ethernet Gateway', desc: 'For the starting customers', maxUplinks: 2, corePortType: 'sfp' },
+  { key: 'medium', label: '16 SFP + 4 QSFP Gateway', desc: 'For the mid to late game customers', maxUplinks: 4, corePortType: 'qsfp' },
+  { key: 'large', label: '32 QSFP Gateway', desc: 'For the late game customers', maxUplinks: 32, corePortType: 'qsfp' },
 ]
 
 export const SFP_MODULE_OPTIONS = [

@@ -115,7 +115,7 @@ export default function RackCalculator() {
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Rack & Network Planning Tool</h1>
         <p className="text-gray-400 mb-10">
           Plan server hardware, rack layouts, network topology, and generate a shopping list.
-          Flow: Customer Gateway &rarr; Core Switch &rarr; Aggregation Switch &rarr; ToR Switch &rarr; Servers
+          Flow: Customer Gateway &rarr; Core Switch &rarr; Aggregation Switch &rarr; Top of Rack Switch &rarr; Servers
         </p>
 
         {/* ════════════════════════════════════════ */}
@@ -363,7 +363,7 @@ export default function RackCalculator() {
               <div className="flex flex-wrap gap-3 mb-4 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: SLOT_COLORS.switch, opacity: 0.65 }} />
-                  ToR Switch
+                  Top of Rack Switch
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: SLOT_COLORS.core, opacity: 0.65 }} />
@@ -454,13 +454,13 @@ export default function RackCalculator() {
                     </tr>
                     )}
                     <tr>
-                      <td className="px-4 py-2 text-gray-300">Aggregation &rarr; ToR</td>
+                      <td className="px-4 py-2 text-gray-300">Aggregation &rarr; Top of Rack</td>
                       <td className="px-4 py-2 text-right">{results.lagSummary.aggToTor.links}</td>
                       <td className="px-4 py-2 text-right font-bold">{results.lagSummary.aggToTor.throughput}</td>
                       <td className="px-4 py-2 text-right text-gray-400">{results.lagSummary.aggToTor.required.toFixed(2)} Gb/s</td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-2 text-gray-300">ToR &rarr; Server</td>
+                      <td className="px-4 py-2 text-gray-300">Top of Rack &rarr; Server</td>
                       <td className="px-4 py-2 text-right">{results.lagSummary.torToServer.links}</td>
                       <td className="px-4 py-2 text-right font-bold">{results.lagSummary.torToServer.throughput}</td>
                       <td className="px-4 py-2 text-right text-gray-400">{results.lagSummary.torToServer.required.toFixed(2)} Gb/s</td>
@@ -469,7 +469,7 @@ export default function RackCalculator() {
                 </table>
                 {redundancyEnabled && (
                   <div className="px-4 py-3 border-t border-gray-800 text-xs text-indigo-400">
-                    Redundancy active &mdash; dual redundant paths: 2 ToRs per rack, 1 dedicated Agg per ToR, {results.totalCores} Core switches, {results.effectiveUplinks.gwToCore} GW links.
+                    Redundancy active &mdash; dual redundant paths: 2 Top of Rack switches per rack, 1 dedicated Agg per Top of Rack, {results.totalCores} Core switches, {results.effectiveUplinks.gwToCore} GW links.
                   </div>
                 )}
               </div>
@@ -497,49 +497,21 @@ export default function RackCalculator() {
                   </div>
                   <p className="text-2xl font-bold">{results.totalAggs}</p>
                   <p className="text-xs text-gray-500">{AGG_SFP_PORTS} SFP + {AGG_QSFP_PORTS} QSFP each</p>
-                  <p className="text-xs text-gray-500">{results.torsPerAgg} ToRs per Agg (max)</p>
+                  <p className="text-xs text-gray-500">{results.torsPerAgg} Top of Rack per Agg (max)</p>
                 </div>
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-gray-400 text-lg">&#9642;</span>
-                    <span className="font-medium text-sm">ToR Switches</span>
+                    <span className="font-medium text-sm">Top of Rack Switches</span>
                   </div>
                   <p className="text-2xl font-bold">{results.totalTors}</p>
                   <p className="text-xs text-gray-500">{TOR_PORTS} Ethernet ports each</p>
-                  <p className="text-xs text-gray-500">{results.serversPerTor} servers per ToR (max)</p>
+                  <p className="text-xs text-gray-500">{results.serversPerTor} servers per Top of Rack (max)</p>
                 </div>
               </div>
             </section>
 
-            {/* ── Module Breakdown ──────────────── */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Module Breakdown</h2>
-              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-800 text-left">
-                      <th className="px-4 py-3 text-gray-400 font-medium">Module Type</th>
-                      <th className="px-4 py-3 text-gray-400 font-medium text-right">Total Required</th>
-                      <th className="px-4 py-3 text-gray-400 font-medium text-right">Purchase (packs of {MODULE_PACK_SIZE})</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {SFP_MODULE_OPTIONS.map(mod => (
-                      <tr key={mod.key} className={results.modules[mod.key] === 0 ? 'opacity-40' : ''}>
-                        <td className="px-4 py-2 text-gray-300">{mod.label}</td>
-                        <td className="px-4 py-2 text-right">{results.modules[mod.key]}</td>
-                        <td className="px-4 py-2 text-right font-bold">{ceilToPack(results.modules[mod.key])}</td>
-                      </tr>
-                    ))}
-                    <tr className={results.modules.qsfp_40g_mmf === 0 ? 'opacity-40' : ''}>
-                      <td className="px-4 py-2 text-gray-300">40Gb Multi Mode Fibre (QSFP)</td>
-                      <td className="px-4 py-2 text-right">{results.modules.qsfp_40g_mmf}</td>
-                      <td className="px-4 py-2 text-right font-bold">{ceilToPack(results.modules.qsfp_40g_mmf)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
+  
 
             {/* ── Reference ─────────────────────── */}
             <section>
@@ -557,8 +529,8 @@ export default function RackCalculator() {
                     <tr><td className="px-4 py-2 text-gray-300">Default rack layout</td><td className="px-4 py-2">{SWITCH_RESERVED_U}U switches + 1x3U + 6x7U = {RACK_TOTAL_U}U</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">3U Server</td><td className="px-4 py-2">5,000 IOPS</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">7U Server</td><td className="px-4 py-2">12,000 IOPS</td></tr>
-                    <tr><td className="px-4 py-2 text-gray-300">ToR Switch</td><td className="px-4 py-2">{TOR_PORTS} x Ethernet ports (fixed, no modules)</td></tr>
-                    <tr><td className="px-4 py-2 text-gray-300">Aggregation Switch</td><td className="px-4 py-2">{AGG_SFP_PORTS} x SFP + {AGG_QSFP_PORTS} x QSFP (Agg&rarr;ToR is Ethernet)</td></tr>
+                    <tr><td className="px-4 py-2 text-gray-300">Top of Rack Switch</td><td className="px-4 py-2">{TOR_PORTS} x Ethernet ports (fixed, no modules)</td></tr>
+                    <tr><td className="px-4 py-2 text-gray-300">Aggregation Switch</td><td className="px-4 py-2">{AGG_SFP_PORTS} x SFP + {AGG_QSFP_PORTS} x QSFP (Agg&rarr;Top of Rack is Ethernet)</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">Core Switch</td><td className="px-4 py-2">{CORE_QSFP_PORTS} x QSFP</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">SFP Modules</td><td className="px-4 py-2">10Gb SMF &middot; 25Gb SMF &middot; 10Gb Ethernet</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">QSFP Modules</td><td className="px-4 py-2">40Gb Multi Mode Fibre</td></tr>
@@ -567,7 +539,7 @@ export default function RackCalculator() {
                       <tr key={gw.key}><td className="px-4 py-2 text-gray-300">{gw.label}</td><td className="px-4 py-2">{gw.desc}</td></tr>
                     ))}
                     <tr><td className="px-4 py-2 text-gray-300">Server types</td><td className="px-4 py-2">GPU &middot; RISC &middot; System &middot; Mainframe</td></tr>
-                    <tr><td className="px-4 py-2 text-gray-300">Network flow</td><td className="px-4 py-2">Gateway &rarr; Core &rarr; Aggregation &rarr; ToR &rarr; Servers</td></tr>
+                    <tr><td className="px-4 py-2 text-gray-300">Network flow</td><td className="px-4 py-2">Gateway &rarr; Core &rarr; Aggregation &rarr; Top of Rack &rarr; Servers</td></tr>
                   </tbody>
                 </table>
               </div>

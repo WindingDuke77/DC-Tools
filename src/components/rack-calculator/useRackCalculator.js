@@ -249,7 +249,6 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
       if (servers[t.key].count3u > 0) shoppingList.push({ item: `${t.label} 3U`, qty: servers[t.key].count3u, purchase: servers[t.key].count3u, unitPrice: SERVER_PRICES[t.key]['3u'] })
     }
     shoppingList.push({ item: 'Lanberg Rack Cabinet 19" 47U', qty: totalRacks, purchase: totalRacks, unitPrice: RACK_PRICE })
-    if (selectedGw) shoppingList.push({ item: selectedGw.label, qty: 1, purchase: 1, unitPrice: GATEWAY_PRICES[selectedGw.key] || 0 })
     if (!skipCoreSwitch) {
       shoppingList.push({ item: '32 x QSFP+', qty: totalCores, purchase: totalCores, unitPrice: SWITCH_PRICES.core })
     }
@@ -287,7 +286,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
       })
     }
     topoCols.push({
-      key: 'agg', label: 'Agg Switches', color: '#f97316', bg: '#431407',
+      key: 'agg', label: 'Aggregation  Switches', color: '#f97316', bg: '#431407',
       nodes: Array.from({ length: totalAggs }, (_, i) => ({
         id: `agg_${i}`, label: `Agg ${i + 1}`, sub: `${AGG_SFP_PORTS} SFP + ${AGG_QSFP_PORTS} QSFP`
       }))
@@ -300,7 +299,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
         const pathCount = Math.min(torsPerAgg, torsPerPath - pathAssigned)
         if (pathCount > 0) {
           const rackCount = pathCount
-          torGroupNodes.push({ id: `tg_${p}`, label: `${rackCount}\u00d72 Racks`, sub: `2 ToR per rack`, aggA: p, aggB: p + aggsPerPath })
+          torGroupNodes.push({ id: `tg_${p}`, label: `${rackCount}\u00d72 Racks`, sub: `2 Top of Rack Switches per rack`, aggA: p, aggB: p + aggsPerPath })
           pathAssigned += pathCount
         }
       }
@@ -309,12 +308,12 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
       for (let ai = 0; ai < totalAggs; ai++) {
         const count = Math.min(torsPerAgg, totalTors - torAssigned)
         if (count > 0) {
-          torGroupNodes.push({ id: `tg_${ai}`, label: `${count}\u00d7 ToR`, sub: `${TOR_PORTS} Eth each`, aggA: ai })
+          torGroupNodes.push({ id: `tg_${ai}`, label: `${count}\u00d7 Switches`, sub: `${TOR_PORTS} Ethernet ports each`, aggA: ai })
           torAssigned += count
         }
       }
     }
-    topoCols.push({ key: 'tor', label: 'ToR Switches', color: '#6b7280', bg: '#1f2937', nodes: torGroupNodes })
+    topoCols.push({ key: 'tor', label: 'Top of Rack Switches', color: '#6b7280', bg: '#1f2937', nodes: torGroupNodes })
 
     if (selectedGw) {
       if (skipCoreSwitch) {

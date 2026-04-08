@@ -41,7 +41,7 @@ export function RackDetail({ rack, tors, index }) {
   let u = 1
   if (rack.torCount > 0) {
     const torU = rack.torU || SWITCH_RESERVED_U
-    rows.push({ from: u, to: u + torU - 1, label: `ToR Switch Space (${tors}\u00d7 ToR)`, color: SLOT_COLORS.switch })
+    rows.push({ from: u, to: u + torU - 1, label: `Top of Rack Switch Space (${tors}\u00d7 Top of Rack)`, color: SLOT_COLORS.switch })
     u += torU
   }
   for (let i = 0; i < (rack.coreSwitches || 0); i++) {
@@ -84,7 +84,7 @@ export function RackDetail({ rack, tors, index }) {
       <div className="flex flex-wrap gap-2 text-xs mt-3 pt-3 border-t border-gray-800">
         <span className="bg-gray-800 rounded px-2 py-1">{rack.totalServers} servers</span>
         <span className="bg-gray-800 rounded px-2 py-1">{rack.count7u}&times; 7U + {rack.count3u}&times; 3U</span>
-        <span className="bg-gray-800 rounded px-2 py-1">{tors}&times; ToR</span>
+        <span className="bg-gray-800 rounded px-2 py-1">{tors}&times; Top of Rack</span>
       </div>
     </div>
   )
