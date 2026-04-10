@@ -52,6 +52,7 @@ export default function RackCalculator() {
     if (cfg.dedicatedNetworkRack !== undefined) setDedicatedNetworkRack(cfg.dedicatedNetworkRack)
     if (cfg.moduleTypes) setModuleTypes(cfg.moduleTypes)
     setSelectedRack(null)
+    setSelectedCustomer(null)
   }, [])
 
   // Load saved offers from localStorage on mount
@@ -198,6 +199,41 @@ export default function RackCalculator() {
   // ── Calculations ──
   const results = useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes })
 
+  const buildSteps = useMemo(() => {
+    if (!results) return []
+    const steps = []
+    steps.push({ text: `Place ${results.totalRacks} rack${results.totalRacks !== 1 ? 's' : ''}`, cat: 'build' })
+    steps.push({ text: `Install ${results.totalTors} Top of Rack switch${results.totalTors !== 1 ? 'es' : ''}`, cat: 'build' })
+    for (const t of SERVER_TYPES) {
+      const s = results.servers[t.key]
+      if (s.total > 0) {
+        const parts = []
+        if (s.count7u > 0) parts.push(`${s.count7u}\u00d7 7U`)
+        if (s.count3u > 0) parts.push(`${s.count3u}\u00d7 3U`)
+        steps.push({ text: `Install ${s.total} ${t.label} server${s.total !== 1 ? 's' : ''} (${parts.join(' + ')})`, cat: 'build' })
+      }
+    }
+    if (results.totalAggs > 0) steps.push({ text: `Install ${results.totalAggs} Aggregation switch${results.totalAggs !== 1 ? 'es' : ''}`, cat: 'build' })
+    if (results.totalCores > 0) steps.push({ text: `Install ${results.totalCores} Core switch${results.totalCores !== 1 ? 'es' : ''}`, cat: 'build' })
+    const sfpTotal = Object.entries(results.modules).filter(([k]) => k !== 'qsfp_40g_mmf').reduce((s, [, v]) => s + v, 0)
+    if (sfpTotal > 0) steps.push({ text: `Install ${sfpTotal} SFP module${sfpTotal !== 1 ? 's' : ''} (buy ${Math.ceil(sfpTotal / MODULE_PACK_SIZE)} pack${Math.ceil(sfpTotal / MODULE_PACK_SIZE) !== 1 ? 's' : ''}) in Aggregation switches`, cat: 'modules' })
+    if (results.modules.qsfp_40g_mmf > 0) {
+      const packs = Math.ceil(results.modules.qsfp_40g_mmf / MODULE_PACK_SIZE)
+      steps.push({ text: `Install ${results.modules.qsfp_40g_mmf} QSFP module${results.modules.qsfp_40g_mmf !== 1 ? 's' : ''} (buy ${packs} pack${packs !== 1 ? 's' : ''}) in ${results.totalCores > 0 ? 'Core &' : ''} Aggregation switches`, cat: 'modules' })
+    }
+    steps.push({ text: `Cable ${results.totalServers} server${results.totalServers !== 1 ? 's' : ''} to their Top of Rack switches (Ethernet)`, cat: 'cable' })
+    steps.push({ text: `Cable ${results.totalTors} Top of Rack uplink${results.totalTors !== 1 ? 's' : ''} to Aggregation switches`, cat: 'cable' })
+    if (results.totalCores > 0) {
+      const links = results.totalAggs * results.effectiveUplinks.coreToAgg
+      steps.push({ text: `Cable ${links} fiber connection${links !== 1 ? 's' : ''} from Aggregation to Core switches`, cat: 'cable' })
+    }
+    if (results.selectedGateway) {
+      const target = skipCoreSwitch ? 'Aggregation' : 'Core'
+      steps.push({ text: `Connect the ${results.selectedGateway.label} to ${target} switch${(skipCoreSwitch ? results.totalAggs : results.totalCores) > 1 ? 'es' : ''}`, cat: 'cable' })
+    }
+    return steps
+  }, [results, skipCoreSwitch])
+
   // ═══════════════════════════════════════════════
   //  Render
   // ═══════════════════════════════════════════════
@@ -210,10 +246,20 @@ export default function RackCalculator() {
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Rack & Network Planning Tool</h1>
-        <p className="text-gray-400 mb-10">
-          Plan server hardware, rack layouts, network topology, and generate a shopping list.
-          Flow: Customer Gateway &rarr; Core Switch &rarr; Aggregation Switch &rarr; Top of Rack Switch &rarr; Servers
+        <p className="text-gray-400 mb-3">
+          Plan your server hardware, rack layouts, and network topology — then follow the build order in-game.
         </p>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs mb-10">
+          <span className="bg-cyan-500/15 text-cyan-400 px-2.5 py-1 rounded-full font-medium">Gateway</span>
+          <span className="text-gray-600">&rarr;</span>
+          <span className="bg-red-500/15 text-red-400 px-2.5 py-1 rounded-full font-medium">Core Switch</span>
+          <span className="text-gray-600">&rarr;</span>
+          <span className="bg-orange-500/15 text-orange-400 px-2.5 py-1 rounded-full font-medium">Aggregation</span>
+          <span className="text-gray-600">&rarr;</span>
+          <span className="bg-gray-500/15 text-gray-300 px-2.5 py-1 rounded-full font-medium">Top of Rack</span>
+          <span className="text-gray-600">&rarr;</span>
+          <span className="bg-indigo-500/15 text-indigo-400 px-2.5 py-1 rounded-full font-medium">Servers</span>
+        </div>
 
         {/* ════════════════════════════════════════ */}
         {/*  CUSTOMER PRESET & SAVE/SHARE MERGED   */}
@@ -222,7 +268,7 @@ export default function RackCalculator() {
           <section className="mb-10">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-4">
-                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Customer Preset &amp; Setup</h2>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider"><span className="text-indigo-400 mr-1">Step 1</span> &mdash; Customer Preset</h2>
                 {selectedCustomer && (
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     {selectedCustomer && (() => {
@@ -383,7 +429,7 @@ export default function RackCalculator() {
         {/*  SERVER INPUTS                          */}
         {/* ════════════════════════════════════════ */}
         <section className="mb-10">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">IOPS Requirements</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 2</span> &mdash; IOPS Requirements</h2>
           <p className="text-xs text-gray-500 mb-4">Enter the raw IOPS needed per server type. Servers are auto-calculated: 7U (12,000 IOPS) first, remainder filled with 3U (5,000 IOPS).</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {SERVER_TYPES.map(t => {
@@ -419,7 +465,7 @@ export default function RackCalculator() {
         {/*  GATEWAY SELECTION                      */}
         {/* ════════════════════════════════════════ */}
         <section className="mb-10">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Customer Gateway</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 3</span> &mdash; Customer Gateway</h2>
           <p className="text-xs text-gray-500 mb-4">Select the gateway type for the customer connection. Only one gateway is allowed.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {GATEWAY_TYPES.map(gw => (
@@ -448,7 +494,7 @@ export default function RackCalculator() {
         {/*  OPTIONS                                */}
         {/* ════════════════════════════════════════ */}
         <section className="mb-10">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Options</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 4</span> &mdash; Options</h2>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
               <input type="checkbox" checked={redundancyEnabled} onChange={e => setRedundancyEnabled(e.target.checked)}
@@ -464,6 +510,9 @@ export default function RackCalculator() {
               <div>
                 <p className="font-medium text-sm">Skip Core Switch</p>
                 <p className="text-xs text-gray-500">Gateway connects directly to Aggregation switches (no Core layer)</p>
+                {results && !skipCoreSwitch && !redundancyEnabled && results.selectedGateway && results.totalAggs <= results.selectedGateway.maxUplinks && (
+                  <p className="text-xs text-green-400 mt-1">Recommended - only {results.totalAggs} Aggregation switch{results.totalAggs !== 1 ? 'es' : ''} needed</p>
+                )}
               </div>
             </label>
             <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
@@ -499,21 +548,61 @@ export default function RackCalculator() {
             <section>
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Summary</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[
-                  [results.totalServers, 'Total Servers'],
-                  [results.total7u, '7U Servers'],
-                  [results.total3u, '3U Servers'],
-                  [results.totalIOPSReq.toLocaleString(), 'IOPS Requested'],
-                  [results.totalIOPS.toLocaleString(), 'IOPS Provided'],
-                  [results.totalRacks, 'Racks Required'],
-                  [`${results.totalBandwidth.toFixed(2)} Gb/s`, 'Required Throughput'],
-                  [`${results.totalTors + results.totalAggs + results.totalCores}`, 'Total Switches'],
-                ].map(([val, label]) => (
-                  <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold">{val}</p>
-                    <p className="text-xs text-gray-400 mt-1">{label}</p>
-                  </div>
-                ))}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold">{results.totalServers}</p>
+                  <p className="text-xs text-gray-400 mt-1">Total Servers</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">{results.total7u}&times; 7U + {results.total3u}&times; 3U</p>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold">{results.totalIOPS.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">IOPS Provided</p>
+                  {results.totalIOPS > results.totalIOPSReq && (
+                    <p className="text-[10px] text-green-400 mt-0.5">+{(results.totalIOPS - results.totalIOPSReq).toLocaleString()} headroom</p>
+                  )}
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold">{results.totalRacks}</p>
+                  <p className="text-xs text-gray-400 mt-1">Racks</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">{results.rackList.reduce((s, r) => s + r.freeU, 0)}U free space</p>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold">{results.totalTors + results.totalAggs + results.totalCores}</p>
+                  <p className="text-xs text-gray-400 mt-1">Switches</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">{results.totalTors} ToR + {results.totalAggs} Agg{results.totalCores > 0 ? ` + ${results.totalCores} Core` : ''}</p>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold">{results.totalBandwidth.toFixed(1)} <span className="text-base font-normal text-gray-500">Gb/s</span></p>
+                  <p className="text-xs text-gray-400 mt-1">Throughput</p>
+                </div>
+                <div className="bg-gray-900 border border-green-500/30 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-green-400">${results.totalCost.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">Total Cost</p>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Build Order ──────────────────── */}
+            <section>
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">In-Game Build Order</h2>
+              <p className="text-xs text-gray-500 mb-4">Follow these steps in order to set up your infrastructure in the game.</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <ol className="space-y-2.5">
+                  {buildSteps.map((step, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className={`shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                        step.cat === 'cable' ? 'bg-green-500/20 text-green-400' :
+                        step.cat === 'modules' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-indigo-500/20 text-indigo-400'
+                      }`}>{i + 1}</span>
+                      <span className="text-sm text-gray-300 pt-0.5">{step.text}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-gray-800 text-[10px] text-gray-500">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500/40" /> Hardware placement</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" /> Module installation</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500/40" /> Cabling</span>
+                </div>
               </div>
             </section>
 
@@ -616,16 +705,23 @@ export default function RackCalculator() {
             </section>
 
             {/* ── Network Topology ──────────────── */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Network Topology</h2>
+            <details className="group" open>
+              <summary className="flex items-center gap-2 cursor-pointer list-none select-none mb-4 [&::-webkit-details-marker]:hidden">
+                <svg className="w-3.5 h-3.5 text-gray-500 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4.5 2l4 4-4 4"/></svg>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Network Topology</h2>
+              </summary>
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
                 <TopologyDiagram data={results.topoData} />
               </div>
-            </section>
+            </details>
 
             {/* ── LAG / Throughput Summary ──────── */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Link Aggregation (LAG) Summary</h2>
+            <details className="group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none select-none mb-4 [&::-webkit-details-marker]:hidden">
+                <svg className="w-3.5 h-3.5 text-gray-500 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4.5 2l4 4-4 4"/></svg>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Link Aggregation (LAG) Summary</h2>
+                <span className="text-[10px] text-gray-600 ml-1">advanced</span>
+              </summary>
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
@@ -681,11 +777,15 @@ export default function RackCalculator() {
                   </div>
                 )}
               </div>
-            </section>
+            </details>
 
             {/* ── Switch Breakdown ──────────────── */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Switch & Device Breakdown</h2>
+            <details className="group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none select-none mb-4 [&::-webkit-details-marker]:hidden">
+                <svg className="w-3.5 h-3.5 text-gray-500 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4.5 2l4 4-4 4"/></svg>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Switch & Device Breakdown</h2>
+                <span className="text-[10px] text-gray-600 ml-1">advanced</span>
+              </summary>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {results.totalCores > 0 && (
@@ -717,13 +817,15 @@ export default function RackCalculator() {
                   <p className="text-xs text-gray-500">{results.serversPerTor} servers per Top of Rack (max)</p>
                 </div>
               </div>
-            </section>
-
-  
+            </details>
 
             {/* ── Reference ─────────────────────── */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Reference</h2>
+            <details className="group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none select-none mb-4 [&::-webkit-details-marker]:hidden">
+                <svg className="w-3.5 h-3.5 text-gray-500 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4.5 2l4 4-4 4"/></svg>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Reference</h2>
+                <span className="text-[10px] text-gray-600 ml-1">game specs</span>
+              </summary>
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
@@ -751,7 +853,7 @@ export default function RackCalculator() {
                   </tbody>
                 </table>
               </div>
-            </section>
+            </details>
           </div>
         )}
       </main>

@@ -15,13 +15,13 @@ const ideaSmiths = [
     name: 'damppancakes',
     avatar:
       'https://cdn.discordapp.com/avatars/727244866098299010/5c0ffd7ef132fd84618f837347761a3c.webp?size=96',
-    contribution: 'Custom presets',
+    contribution: 'Customer Presets',
   },
   {
     name: 'dpslwk',
     avatar:
       'https://cdn.discordapp.com/avatars/904757369936961616/c0a1c90893dd0a27371613ae85a8112b.webp?size=96',
-    contribution: 'Cable A & B colors and color palette',
+    contribution: 'Cable A & B color scheme, color palette design, and UI improvements',
   },
 ]
 
