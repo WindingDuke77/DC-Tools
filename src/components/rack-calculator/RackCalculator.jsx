@@ -146,6 +146,39 @@ export default function RackCalculator() {
 
   const deleteOffer = (idx) => persistOffers(savedOffers.filter((_, i) => i !== idx))
 
+  const [renamingIdx, setRenamingIdx] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [dragIndex, setDragIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+
+  const handleRenameOffer = (idx, newName) => {
+    const trimmed = newName.trim()
+    if (!trimmed) return
+    const next = savedOffers.map((o, i) => i === idx ? { ...o, name: trimmed } : o)
+    persistOffers(next)
+    setRenamingIdx(null)
+  }
+
+  const handleDragStart = (index) => setDragIndex(index)
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = (e, index) => {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === index) { setDragIndex(null); setDragOverIndex(null); return }
+    const next = [...savedOffers]
+    const [moved] = next.splice(dragIndex, 1)
+    next.splice(index, 0, moved)
+    persistOffers(next)
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null) }
+
   const shareUrl = useMemo(() => {
     const base = window.location.origin + window.location.pathname
     return `${base}#/tools/rack-calculator?cfg=${btoa(JSON.stringify(getConfig()))}`
@@ -265,31 +298,59 @@ export default function RackCalculator() {
             </div>
             {savedOffers.length > 0 && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-4 max-h-64 overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-800 text-left">
-                      <th className="px-4 py-3 text-gray-400 font-medium">Name</th>
-                      <th className="px-4 py-3 text-gray-400 font-medium">Saved</th>
-                      <th className="px-4 py-3 text-gray-400 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {savedOffers.map((offer, i) => (
-                      <tr key={i}>
-                        <td className="px-4 py-2 text-gray-300">{offer.name}</td>
-                        <td className="px-4 py-2 text-gray-500 text-xs">{new Date(offer.savedAt).toLocaleString()}</td>
-                        <td className="px-4 py-2 text-right">
-                          <button onClick={() => loadOffer(offer)}
-                            className="text-indigo-400 hover:text-indigo-300 text-xs font-medium mr-3 transition-colors">Load</button>
-                          <button onClick={() => deleteOffer(i)}
-                            className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">Delete</button>
-                          <button onClick={() => setPendingOverride({ offer: { ...offer, config: getConfig(), savedAt: new Date().toISOString() }, idx: i })}
-                            className="ml-2 text-yellow-400 hover:text-yellow-300 text-xs font-medium transition-colors">Override</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="divide-y divide-gray-800">
+                  {savedOffers.map((offer, i) => (
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => handleDragStart(i)}
+                      onDragOver={(e) => handleDragOver(e, i)}
+                      onDrop={(e) => handleDrop(e, i)}
+                      onDragEnd={handleDragEnd}
+                      className="flex items-center gap-3 px-4 py-2 transition-colors"
+                      style={{
+                        borderLeft: dragOverIndex === i && dragIndex !== i ? '2px solid #6366f1' : '2px solid transparent',
+                        opacity: dragIndex === i ? 0.4 : 1,
+                      }}
+                    >
+                      <span className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0" title="Drag to reorder">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
+                        </svg>
+                      </span>
+                      {renamingIdx === i ? (
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => handleRenameOffer(i, renameValue)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRenameOffer(i, renameValue)
+                            if (e.key === 'Escape') setRenamingIdx(null)
+                          }}
+                          className="flex-1 bg-gray-800 border border-indigo-500 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none min-w-0"
+                        />
+                      ) : (
+                        <span className="text-sm text-gray-300 flex-1 truncate min-w-0">{offer.name}</span>
+                      )}
+                      <span className="text-gray-600 text-xs shrink-0 hidden sm:inline">{new Date(offer.savedAt).toLocaleDateString()}</span>
+                      <button
+                        onClick={() => { setRenamingIdx(i); setRenameValue(offer.name) }}
+                        className="text-gray-600 hover:text-gray-300 cursor-pointer shrink-0 transition-colors"
+                        title="Rename"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button onClick={() => loadOffer(offer)} className="text-indigo-400 hover:text-indigo-300 text-xs font-medium shrink-0 transition-colors">Load</button>
+                      <button onClick={() => deleteOffer(i)} className="text-red-400 hover:text-red-300 text-xs font-medium shrink-0 transition-colors">Delete</button>
+                      <button onClick={() => setPendingOverride({ offer: { ...offer, config: getConfig(), savedAt: new Date().toISOString() }, idx: i })}
+                        className="text-yellow-400 hover:text-yellow-300 text-xs font-medium shrink-0 transition-colors">Override</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

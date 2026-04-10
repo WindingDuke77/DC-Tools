@@ -215,6 +215,26 @@ function RackSVG({ rack, cable, server }) {
   )
 }
 
+// --- Icons ---
+function DragHandleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+    </svg>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
 // --- Swatch ---
 function Swatch({ label, value }) {
   const [copied, setCopied] = useState(false)
@@ -304,6 +324,41 @@ export default function ColorPalette() {
   const handleLoadSaved = (entry) => {
     setState(entry.state)
   }
+
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [dragIndex, setDragIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+
+  const handleRename = (id, newName) => {
+    const trimmed = newName.trim()
+    if (!trimmed) return
+    const next = saved.map(s => s.id === id ? { ...s, name: trimmed } : s)
+    setSaved(next)
+    persistSaved(next)
+    setRenamingId(null)
+  }
+
+  const handleDragStart = (index) => setDragIndex(index)
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = (e, index) => {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === index) { setDragIndex(null); setDragOverIndex(null); return }
+    const next = [...saved]
+    const [moved] = next.splice(dragIndex, 1)
+    next.splice(index, 0, moved)
+    setSaved(next)
+    persistSaved(next)
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null) }
 
   // --- Export text ---
   const handleExport = () => {
@@ -495,28 +550,54 @@ export default function ColorPalette() {
               <div>
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Saved Presets</h2>
                 <div className="space-y-2">
-                  {saved.map((entry) => {
+                  {saved.map((entry, index) => {
                     const c = resolveColors(entry.state)
                     return (
-                      <div key={entry.id} className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
-                        <div className="flex gap-1">
+                      <div
+                        key={entry.id}
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDrop={(e) => handleDrop(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className="flex items-center gap-3 bg-gray-900 border rounded-lg px-3 py-2 transition-colors"
+                        style={{
+                          borderColor: dragOverIndex === index && dragIndex !== index ? '#6366f1' : 'rgb(31,41,55)',
+                          opacity: dragIndex === index ? 0.4 : 1,
+                        }}
+                      >
+                        <span className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0" title="Drag to reorder">
+                          <DragHandleIcon />
+                        </span>
+                        <div className="flex gap-1 shrink-0">
                           <span className="w-4 h-4 rounded" style={{ backgroundColor: c.rack }} />
                           <span className="w-4 h-4 rounded" style={{ backgroundColor: c.cable }} />
                           <span className="w-4 h-4 rounded" style={{ backgroundColor: c.cableB }} />
                         </div>
-                        <span className="text-sm flex-1 truncate">{entry.name}</span>
+                        {renamingId === entry.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => handleRename(entry.id, renameValue)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRename(entry.id, renameValue)
+                              if (e.key === 'Escape') setRenamingId(null)
+                            }}
+                            className="flex-1 bg-gray-800 border border-indigo-500 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none min-w-0"
+                          />
+                        ) : (
+                          <span className="text-sm flex-1 truncate min-w-0">{entry.name}</span>
+                        )}
                         <button
-                          onClick={() => handleLoadSaved(entry)}
-                          className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                          onClick={() => { setRenamingId(entry.id); setRenameValue(entry.name) }}
+                          className="text-gray-600 hover:text-gray-300 cursor-pointer shrink-0 transition-colors"
+                          title="Rename"
                         >
-                          Load
+                          <PencilIcon />
                         </button>
-                        <button
-                          onClick={() => handleDeleteSaved(entry.id)}
-                          className="text-xs text-gray-600 hover:text-red-400 cursor-pointer"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleLoadSaved(entry)} className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0">Load</button>
+                        <button onClick={() => handleDeleteSaved(entry.id)} className="text-xs text-gray-600 hover:text-red-400 cursor-pointer shrink-0">Delete</button>
                       </div>
                     )
                   })}
