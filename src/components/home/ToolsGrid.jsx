@@ -30,6 +30,12 @@ const tools = [
     icon: '🖥',
     link: '#/tools/rack-calculator',
   },
+  {
+    title: 'Save Editor',
+    description: 'Edit save files — modify money, XP, reputation, and unlock shop items.',
+    icon: '💾',
+    link: '#/tools/save-editor',
+  },
 ]
 
 export default function ToolsGrid() {
