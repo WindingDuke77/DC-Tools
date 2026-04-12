@@ -4,30 +4,101 @@ import {
   SERVER_TYPES, TOR_PORTS, AGG_SFP_PORTS, AGG_QSFP_PORTS,
   CORE_QSFP_PORTS, QSFP_SPEED, GATEWAY_TYPES, SFP_MODULE_OPTIONS,
   MODULE_PACK_SIZE, SERVER_PRICES, SWITCH_PRICES, RACK_PRICE,
-  GATEWAY_PRICES, MODULE_PRICES, RACK_7U_PER, RACK_3U_PER,
+  GATEWAY_PRICES, MODULE_PRICES, RACK_7U_PER, RACK_3U_PER, RACK_PRESETS,
 } from './constants'
-import { num, ceilToPack, getSfpSpeed, buildRack, iopsToServers } from './helpers'
+import { num, ceilToPack, getSfpSpeed, buildRack } from './helpers'
 
-export default function useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes }) {
+export default function useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes, rackPreset }) {
   return useMemo(() => {
-    // Convert IOPS to server counts
-    const servers = {}
-    let totalServers = 0, total3u = 0, total7u = 0, totalIOPSRequested = 0
-    for (const t of SERVER_TYPES) {
-      const requested = num(iopsInputs[t.key])
-      totalIOPSRequested += requested
-      const { count7u: c7, count3u: c3 } = iopsToServers(requested)
-      servers[t.key] = { count3u: c3, count7u: c7, total: c3 + c7, iopsRequested: requested }
-      totalServers += c3 + c7
-      total3u += c3
-      total7u += c7
-    }
+    // Resolve rack preset
+    const preset = RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]
+    const per7u = preset.per7u
+    const per3u = preset.per3u
 
     // Parse gateway
     const selectedGw = gatewayType ? GATEWAY_TYPES.find(g => g.key === gatewayType) : null
     const totalGateways = selectedGw ? 1 : 0
 
-    if (totalServers === 0) return null
+    // Check if any IOPS requested
+    let totalIOPSRequested = 0
+    for (const t of SERVER_TYPES) totalIOPSRequested += num(iopsInputs[t.key])
+    if (totalIOPSRequested === 0) return null
+
+    // ── Pack servers into racks by following the preset pattern ──
+    // Each rack fills: per7u × 7U servers, then per3u × 3U servers.
+    // Servers are placed until that type's IOPS target is met, then move on.
+    const torU = preset.noSwitch ? 0 : (redundancyEnabled ? 2 : SWITCH_RESERVED_U)
+    const serverU = RACK_TOTAL_U - torU
+    const rackList = []
+
+    const typeQueue = SERVER_TYPES.map(t => ({
+      key: t.key,
+      iopsLeft: num(iopsInputs[t.key]),
+    })).filter(g => g.iopsLeft > 0)
+
+    let currentRack = null
+    let uLeft = 0
+    let rack7Count = 0
+    let rack3Count = 0
+
+    const pushRack = () => {
+      if (currentRack && currentRack.length > 0) {
+        const types = [...new Set(currentRack.map(s => s.type))]
+        const label = types.length > 1 ? 'Mixed' : (SERVER_TYPES.find(t => t.key === types[0])?.label ?? 'Mixed')
+        rackList.push(buildRack(currentRack, label, torU))
+      }
+    }
+
+    const newRack = () => {
+      pushRack()
+      currentRack = []
+      uLeft = serverU
+      rack7Count = 0
+      rack3Count = 0
+    }
+
+    for (const g of typeQueue) {
+      // Not mixed → new rack per type. Mixed → continue current rack.
+      if (!mixedRacks || currentRack === null) newRack()
+
+      while (g.iopsLeft > 0) {
+        // Follow the pattern: 7U slots first
+        while (g.iopsLeft > 0 && rack7Count < per7u && uLeft >= 7) {
+          currentRack.push({ type: g.key, size: 7 })
+          g.iopsLeft -= 12000
+          uLeft -= 7
+          rack7Count++
+        }
+        // Then 3U slots
+        while (g.iopsLeft > 0 && rack3Count < per3u && uLeft >= 3) {
+          currentRack.push({ type: g.key, size: 3 })
+          g.iopsLeft -= 5000
+          uLeft -= 3
+          rack3Count++
+        }
+        // Pattern full → next rack
+        if (g.iopsLeft > 0) {
+          newRack()
+          if (per7u === 0 && per3u === 0) break
+        }
+      }
+    }
+    pushRack()
+
+    // ── Derive totals from packed racks ──
+    const servers = {}
+    for (const t of SERVER_TYPES) {
+      servers[t.key] = { count7u: 0, count3u: 0, total: 0, iopsRequested: num(iopsInputs[t.key]) }
+    }
+    let totalServers = 0, total3u = 0, total7u = 0
+    for (const rack of rackList) {
+      for (const sv of rack.servers) {
+        if (sv.size === 7) { total7u++; servers[sv.type].count7u++ }
+        else { total3u++; servers[sv.type].count3u++ }
+        totalServers++
+        servers[sv.type].total++
+      }
+    }
 
     // Required throughput from servers
     const totalBandwidth = total7u * 0.6 + total3u * 0.25
@@ -49,57 +120,6 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
       gwMaxThroughput = selectedGw.maxUplinks * gwSpd
       gwInsufficient = gwMaxThroughput < totalBandwidth
     }
-
-    // ── Pack servers into racks ──
-    const torU = redundancyEnabled ? 2 : SWITCH_RESERVED_U
-    const serverU = RACK_TOTAL_U - torU
-    const rackList = []
-
-    // Build queue of servers needed per type
-    const typeQueue = SERVER_TYPES.map(t => ({
-      key: t.key, label: t.label,
-      rem7: servers[t.key].count7u, rem3: servers[t.key].count3u,
-    })).filter(g => g.rem7 > 0 || g.rem3 > 0)
-
-    let currentRack = null
-    let uLeft = 0
-
-    const pushRack = () => {
-      if (currentRack && currentRack.length > 0) {
-        const types = [...new Set(currentRack.map(s => s.type))]
-        const label = types.length > 1 ? 'Mixed' : (SERVER_TYPES.find(t => t.key === types[0])?.label ?? 'Mixed')
-        rackList.push(buildRack(currentRack, label, torU))
-      }
-    }
-
-    const newRack = () => {
-      pushRack()
-      currentRack = []
-      uLeft = serverU
-    }
-
-    for (const g of typeQueue) {
-      // If not mixed racks, always start a new rack for a new type
-      if (!mixedRacks || currentRack === null) newRack()
-
-      while (g.rem7 > 0 || g.rem3 > 0) {
-        // Can we fit anything we need into the current rack?
-        const canFit7 = uLeft >= 7 && g.rem7 > 0
-        const canFit3 = uLeft >= 3 && g.rem3 > 0
-        if (!canFit7 && !canFit3) newRack()
-
-        if (uLeft >= 7 && g.rem7 > 0) {
-          currentRack.push({ type: g.key, size: 7 }); g.rem7--; uLeft -= 7
-          // If leftover fits a 3U and we have one, fill it
-          if (uLeft >= 3 && uLeft < 7 && g.rem3 > 0) {
-            currentRack.push({ type: g.key, size: 3 }); g.rem3--; uLeft -= 3
-          }
-        } else if (uLeft >= 3 && g.rem3 > 0) {
-          currentRack.push({ type: g.key, size: 3 }); g.rem3--; uLeft -= 3
-        }
-      }
-    }
-    pushRack() // flush last rack
 
     // ── ToR Switches ──
     const torServerPorts = TOR_PORTS - 1
@@ -125,7 +145,6 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
     let eff_gwToAgg = 0
     if (skipCoreSwitch) {
       totalCores = 0
-      // Gateway connects directly to agg switches
       if (selectedGw) {
         const gwSpd = selectedGw.corePortType === 'sfp' ? getSfpSpeed(moduleTypes.gwToCore) : QSFP_SPEED
         gwToCoreLinks = 0
@@ -160,25 +179,37 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
     }
 
     // ── Assign ToR counts ──
-    rackList.forEach((r, i) => { r.torCount = torsPerRack[i] })
+    if (preset.noSwitch) {
+      rackList.forEach(r => { r.torCount = 0 })
+    } else {
+      rackList.forEach((r, i) => { r.torCount = torsPerRack[i] })
+    }
 
     // ── Place Core & Agg switches into racks ──
     const switchesToPlace = []
     for (let i = 0; i < totalCores; i++) switchesToPlace.push({ kind: 'core', u: CORE_SWITCH_U })
     for (let i = 0; i < totalAggs; i++) switchesToPlace.push({ kind: 'agg', u: AGG_SWITCH_U })
+    if (preset.noSwitch) {
+      for (let i = 0; i < totalTors; i++) switchesToPlace.push({ kind: 'tor', u: SWITCH_RESERVED_U })
+    }
 
-    if (dedicatedNetworkRack) {
-      const netRack = {
+    if (dedicatedNetworkRack || preset.noSwitch) {
+      const makeNetRack = () => ({
         label: 'Network', servers: [], count7u: 0, count3u: 0,
         totalServers: 0, usedU: 0, freeU: RACK_TOTAL_U,
-        torCount: 0, coreSwitches: 0, aggSwitches: 0,
-      }
+        torCount: 0, torU: 0, coreSwitches: 0, aggSwitches: 0, torSwitches: 0,
+      })
+      const netRacks = [makeNetRack()]
       for (const sw of switchesToPlace) {
-        if (sw.kind === 'core') netRack.coreSwitches++; else netRack.aggSwitches++
-        netRack.usedU += sw.u
-        netRack.freeU -= sw.u
+        let nr = netRacks[netRacks.length - 1]
+        if (nr.freeU < sw.u) { netRacks.push(makeNetRack()); nr = netRacks[netRacks.length - 1] }
+        if (sw.kind === 'core') nr.coreSwitches++
+        else if (sw.kind === 'tor') nr.torSwitches++
+        else nr.aggSwitches++
+        nr.usedU += sw.u
+        nr.freeU -= sw.u
       }
-      rackList.unshift(netRack)
+      rackList.unshift(...netRacks)
     } else {
       let swIdx = 0
       for (const rack of rackList) {
@@ -203,7 +234,6 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
     }
     if (selectedGw) {
       if (skipCoreSwitch) {
-        // Gateway connects directly to agg switches
         const gwUp = Math.min(eff_gwToAgg, selectedGw.maxUplinks)
         if (selectedGw.corePortType === 'sfp') {
           modules[moduleTypes.gwToCore] = (modules[moduleTypes.gwToCore] || 0) + gwUp
@@ -222,7 +252,7 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
     }
 
     // ── Throughput / LAG ──
-    const maxRackBandwidth = RACK_7U_PER * 0.6 + RACK_3U_PER * 0.25
+    const maxRackBandwidth = per7u * 0.6 + per3u * 0.25
     const lagSummary = {
       torToServer: { links: eff.torToServer, speed: 'Ethernet', throughput: 'Ethernet (fixed per link)', required: maxRackBandwidth },
       aggToTor: { links: eff.aggToTor, speed: 10, throughput: `${eff.aggToTor} x 10Gb = ${eff.aggToTor * 10}Gb`, required: maxRackBandwidth },
@@ -317,7 +347,6 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
 
     if (selectedGw) {
       if (skipCoreSwitch) {
-        // Gateway connects directly to agg switches
         for (let ai = 0; ai < totalAggs; ai++) topoEdges.push({ from: 'gw_1', to: `agg_${ai}`, color: '#06b6d4' })
       } else {
         for (let ci = 0; ci < totalCores; ci++) topoEdges.push({ from: 'gw_1', to: `core_${ci}`, color: '#06b6d4' })
@@ -366,5 +395,5 @@ export default function useRackCalculator({ iopsInputs, gatewayType, redundancyE
       shoppingList, totalCost,
       topoData: { columns: topoCols, edges: topoEdges, lagLabels: topoLagLabels },
     }
-  }, [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes])
+  }, [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes, rackPreset])
 }

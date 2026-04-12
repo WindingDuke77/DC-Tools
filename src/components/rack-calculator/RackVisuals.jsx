@@ -6,6 +6,7 @@ export function MiniRack({ rack, index, isSelected, onClick }) {
   const uH = 5, w = 52, h = RACK_TOTAL_U * uH
   const slots = []
   if (rack.torCount > 0) slots.push({ u: rack.torU || SWITCH_RESERVED_U, color: SLOT_COLORS.switch })
+  for (let i = 0; i < (rack.torSwitches || 0); i++) slots.push({ u: SWITCH_RESERVED_U, color: SLOT_COLORS.switch })
   for (let i = 0; i < (rack.coreSwitches || 0); i++) slots.push({ u: CORE_SWITCH_U, color: SLOT_COLORS.core })
   for (let i = 0; i < (rack.aggSwitches || 0); i++) slots.push({ u: AGG_SWITCH_U, color: SLOT_COLORS.agg })
   for (const sv of rack.servers) {
@@ -43,6 +44,10 @@ export function RackDetail({ rack, tors, index }) {
     const torU = rack.torU || SWITCH_RESERVED_U
     rows.push({ from: u, to: u + torU - 1, label: `Top of Rack Switch Space (${tors}\u00d7 Top of Rack)`, color: SLOT_COLORS.switch })
     u += torU
+  }
+  for (let i = 0; i < (rack.torSwitches || 0); i++) {
+    rows.push({ from: u, to: u + SWITCH_RESERVED_U - 1, label: 'Top of Rack Switch', color: SLOT_COLORS.switch })
+    u += SWITCH_RESERVED_U
   }
   for (let i = 0; i < (rack.coreSwitches || 0); i++) {
     rows.push({ from: u, to: u + CORE_SWITCH_U - 1, label: 'Core Switch', color: SLOT_COLORS.core })

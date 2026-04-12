@@ -18,22 +18,26 @@ export function buildRack(servers, typeLabel, torU = SWITCH_RESERVED_U) {
   }
 }
 
-export function iopsToServers(iops) {
+export function iopsToServers(iops, per7u = RACK_7U_PER, per3u = 1) {
   if (iops <= 0) return { count7u: 0, count3u: 0 }
 
   let count7u = 0, count3u = 0
   let remaining = iops
-  let slot = 0 // 0..5 = 7U slots, 6 = 3U slot
+  let slot7 = 0, slot3 = 0
 
   while (remaining > 0) {
-    if (slot < RACK_7U_PER) {
+    if (per7u > 0 && slot7 < per7u) {
       count7u++
       remaining -= 12000
-      slot++
-    } else {
+      slot7++
+    } else if (per3u > 0 && slot3 < per3u) {
       count3u++
       remaining -= 5000
-      slot = 0 // rack complete, start next
+      slot3++
+    } else {
+      slot7 = 0
+      slot3 = 0
+      if (per7u === 0 && per3u === 0) break
     }
   }
 

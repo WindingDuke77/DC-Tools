@@ -5,7 +5,7 @@ import Footer from '../layout/Footer'
 import {
   RACK_TOTAL_U, SERVER_TYPES, GATEWAY_TYPES, SFP_MODULE_OPTIONS,
   MODULE_PACK_SIZE, CORE_QSFP_PORTS, AGG_SFP_PORTS, AGG_QSFP_PORTS,
-  TOR_PORTS, SWITCH_RESERVED_U, AVAILABLE_U, QSFP_SPEED,
+  TOR_PORTS, SWITCH_RESERVED_U, AVAILABLE_U, QSFP_SPEED, RACK_PRESETS,
 } from './constants'
 import { num, ceilToPack, iopsToServers } from './helpers'
 import { MiniRack, RackDetail, SLOT_COLORS } from './RackVisuals'
@@ -22,6 +22,7 @@ export default function RackCalculator() {
   const [mixedRacks, setMixedRacks] = useState(false)
   const [dedicatedNetworkRack, setDedicatedNetworkRack] = useState(false)
   const [moduleTypes, setModuleTypes] = useState({ gwToCore: 'sfp_10g_smf' })
+  const [rackPreset, setRackPreset] = useState('default')
 
   // ── Customer Presets ──
   const [customers, setCustomers] = useState([])
@@ -39,8 +40,9 @@ export default function RackCalculator() {
   const OFFERS_KEY = 'dc-tools-offers'
 
   const getConfig = useCallback(() => ({
-    iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes,
-  }), [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes])
+    iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes, rackPreset,
+    customerName: selectedCustomer?.name || null,
+  }), [iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes, rackPreset, selectedCustomer])
 
   const applyConfig = useCallback((cfg) => {
     if (cfg.iopsInputs) setIopsInputs(cfg.iopsInputs)
@@ -51,6 +53,7 @@ export default function RackCalculator() {
     if (cfg.mixedRacks !== undefined) setMixedRacks(cfg.mixedRacks)
     if (cfg.dedicatedNetworkRack !== undefined) setDedicatedNetworkRack(cfg.dedicatedNetworkRack)
     if (cfg.moduleTypes) setModuleTypes(cfg.moduleTypes)
+    if (cfg.rackPreset) setRackPreset(cfg.rackPreset)
     setSelectedRack(null)
     setSelectedCustomer(null)
   }, [])
@@ -111,6 +114,21 @@ export default function RackCalculator() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Resolve customerName from URL config once customers are loaded
+  useEffect(() => {
+    if (customers.length === 0) return
+    const cfgParam = searchParams.get('cfg')
+    if (cfgParam) {
+      try {
+        const cfg = JSON.parse(atob(cfgParam))
+        if (cfg.customerName) {
+          const match = customers.find(c => c.name === cfg.customerName)
+          if (match) setSelectedCustomer(match)
+        }
+      } catch { /* ignore */ }
+    }
+  }, [customers]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const persistOffers = (offers) => {
     setSavedOffers(offers)
     localStorage.setItem(OFFERS_KEY, JSON.stringify(offers))
@@ -143,7 +161,13 @@ export default function RackCalculator() {
   }
   const cancelOverride = () => setPendingOverride(null)
 
-  const loadOffer = (offer) => applyConfig(offer.config)
+  const loadOffer = (offer) => {
+    applyConfig(offer.config)
+    if (offer.config.customerName && customers.length > 0) {
+      const match = customers.find(c => c.name === offer.config.customerName)
+      if (match) setSelectedCustomer(match)
+    }
+  }
 
   const deleteOffer = (idx) => persistOffers(savedOffers.filter((_, i) => i !== idx))
 
@@ -197,7 +221,7 @@ export default function RackCalculator() {
   const handleIOPS = (key, val) => setIopsInputs(p => ({ ...p, [key]: val.replace(/\D/g, '') }))
 
   // ── Calculations ──
-  const results = useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes })
+  const results = useRackCalculator({ iopsInputs, gatewayType, redundancyEnabled, skipCoreSwitch, mixedRacks, dedicatedNetworkRack, moduleTypes, rackPreset })
 
   const buildSteps = useMemo(() => {
     if (!results) return []
@@ -430,11 +454,12 @@ export default function RackCalculator() {
         {/* ════════════════════════════════════════ */}
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 2</span> &mdash; IOPS Requirements</h2>
-          <p className="text-xs text-gray-500 mb-4">Enter the raw IOPS needed per server type. Servers are auto-calculated: 7U (12,000 IOPS) first, remainder filled with 3U (5,000 IOPS).</p>
+          <p className="text-xs text-gray-500 mb-4">Enter the raw IOPS needed per server type. Servers are auto-calculated using the <strong className="text-gray-400">{(RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]).label}</strong> rack layout.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {SERVER_TYPES.map(t => {
               const val = num(iopsInputs[t.key])
-              const { count7u, count3u } = iopsToServers(val)
+              const activePreset = RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]
+              const { count7u, count3u } = iopsToServers(val, activePreset.per7u, activePreset.per3u)
               const actualIOPS = count7u * 12000 + count3u * 5000
               return (
               <div key={t.key} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -494,7 +519,25 @@ export default function RackCalculator() {
         {/*  OPTIONS                                */}
         {/* ════════════════════════════════════════ */}
         <section className="mb-10">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 4</span> &mdash; Options</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4"><span className="text-indigo-400 mr-1">Step 4</span> &mdash; Rack Layout</h2>
+          <p className="text-xs text-gray-500 mb-4">Choose how servers are packed into each 47U rack.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {RACK_PRESETS.map(p => {
+              const iops = p.per7u * 12000 + p.per3u * 5000
+              const usedU = p.per7u * 7 + p.per3u * 3
+              const totalU = p.noSwitch ? 47 : 46
+              return (
+                <button key={p.key} onClick={() => { setRackPreset(p.key); if (p.noSwitch) setDedicatedNetworkRack(true) }}
+                  className={`bg-gray-900 border rounded-xl p-4 text-left transition-colors ${rackPreset === p.key ? 'border-indigo-500 ring-1 ring-indigo-500/50' : 'border-gray-800 hover:border-gray-700'}`}>
+                  <p className="font-medium text-sm mb-1">{p.label}</p>
+                  <p className="text-xs text-gray-500">{p.desc}</p>
+                  <p className="text-[10px] text-gray-600 mt-2">{usedU}U / {totalU}U &middot; {iops.toLocaleString()} IOPS/rack</p>
+                  {p.noSwitch && <p className="text-[10px] text-amber-500/70 mt-0.5">No Top of Rack switch in rack</p>}
+                </button>
+              )
+            })}
+          </div>
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Options</h3>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
               <input type="checkbox" checked={redundancyEnabled} onChange={e => setRedundancyEnabled(e.target.checked)}
@@ -523,12 +566,14 @@ export default function RackCalculator() {
                 <p className="text-xs text-gray-500">Allow multiple server types in the same rack</p>
               </div>
             </label>
-            <label className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer select-none">
-              <input type="checkbox" checked={dedicatedNetworkRack} onChange={e => setDedicatedNetworkRack(e.target.checked)}
+            <label className={`flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 select-none ${(RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]).noSwitch ? 'opacity-60' : 'cursor-pointer'}`}>
+              <input type="checkbox" checked={dedicatedNetworkRack || (RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]).noSwitch}
+                onChange={e => setDedicatedNetworkRack(e.target.checked)}
+                disabled={(RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]).noSwitch}
                 className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-indigo-500 focus:ring-indigo-500" />
               <div>
                 <p className="font-medium text-sm">Dedicated Network Rack</p>
-                <p className="text-xs text-gray-500">Place all Core & Aggregation switches in a separate rack</p>
+                <p className="text-xs text-gray-500">{(RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]).noSwitch ? 'Required — all switches moved to network rack' : 'Place all Core & Aggregation switches in a separate rack'}</p>
               </div>
             </label>
 
@@ -836,7 +881,7 @@ export default function RackCalculator() {
                   </thead>
                   <tbody className="divide-y divide-gray-800">
                     <tr><td className="px-4 py-2 text-gray-300">Rack</td><td className="px-4 py-2">{RACK_TOTAL_U}U total &middot; {SWITCH_RESERVED_U}U switches &middot; {AVAILABLE_U}U servers</td></tr>
-                    <tr><td className="px-4 py-2 text-gray-300">Default rack layout</td><td className="px-4 py-2">{SWITCH_RESERVED_U}U switches + 1x3U + 6x7U = {RACK_TOTAL_U}U</td></tr>
+                    <tr><td className="px-4 py-2 text-gray-300">Active rack layout</td><td className="px-4 py-2">{(() => { const p = RACK_PRESETS.find(p => p.key === rackPreset) || RACK_PRESETS[0]; return `${p.noSwitch ? '0' : SWITCH_RESERVED_U}U switches${p.per3u > 0 ? ` + ${p.per3u}×3U` : ''}${p.per7u > 0 ? ` + ${p.per7u}×7U` : ''}` })()}</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">3U Server</td><td className="px-4 py-2">5,000 IOPS</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">7U Server</td><td className="px-4 py-2">12,000 IOPS</td></tr>
                     <tr><td className="px-4 py-2 text-gray-300">Top of Rack Switch</td><td className="px-4 py-2">{TOR_PORTS} x Ethernet ports (fixed, no modules)</td></tr>

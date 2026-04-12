@@ -54,6 +54,18 @@ export const MODULE_PRICES = {
   qsfp_pack: 500, // 5x QSFP+ Module Fiber (estimated)
 }
 
-// Derived
+// ═══════════════════════════════════════════════
+//  Rack Layout Presets
+// ═══════════════════════════════════════════════
+export const RACK_PRESETS = [
+  { key: 'default',   label: '6×7U + 1×3U',  desc: 'Default — max IOPS density',              per7u: 6, per3u: 1  },
+  { key: 'all3u',     label: '15×3U',         desc: 'All 3U — budget servers only',             per7u: 0, per3u: 15 },
+  { key: 'balanced',  label: '4×7U + 6×3U',   desc: 'Balanced — perfect 46U fit',               per7u: 4, per3u: 6  },
+  { key: 'heavy3u',   label: '3×7U + 8×3U',   desc: '3U heavy — more small servers',            per7u: 3, per3u: 8  },
+  { key: 'pure7u',    label: '6×7U',          desc: '7U only — simple layout',                  per7u: 6, per3u: 0  },
+  { key: 'full',      label: '5×7U + 4×3U',   desc: 'Full — no switch, all 47U servers',        per7u: 5, per3u: 4, noSwitch: true },
+]
+
+// Derived (default preset)
 export const RACK_7U_PER = 6
 export const RACK_3U_PER = 1
