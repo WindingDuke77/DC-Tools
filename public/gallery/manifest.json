@@ -1,0 +1,43 @@
+{
+  "authors": [
+    {
+      "name": "Waseku",
+      "folder": "Waseku",
+      "images": [
+        "4.png",
+        "5.png",
+        "Screenshot-2026-01-28-121057.png"
+      ]
+    },
+    {
+      "name": "dpslwk",
+      "folder": "dpslwk",
+      "images": [
+        "Reduncant-Network-Planing.png",
+        "Redundant.png",
+        "Screenshot-2026-04-01-at-15.43.47.png",
+        "Screenshot-2026-04-01-at-18.42.11.png",
+        "Screenshot-2026-04-02-at-00.30.04.png",
+        "Screenshot-2026-04-02-at-00.34.08.png",
+        "Screenshot-2026-04-02-at-01.32.15.png",
+        "Screenshot-2026-04-02-at-02.18.35.png",
+        "Screenshot-2026-04-03-at-05.47.13.png",
+        "Screenshot-2026-04-03-at-16.55.44.png",
+        "Screenshot-2026-04-04-at-00.04.55.png",
+        "Screenshot-2026-04-04-at-06.36.43.png",
+        "Screenshot-2026-04-04-at-14.42.25.png",
+        "Screenshot-2026-04-05-at-18.16.12---Copy-(2).png",
+        "Screenshot-2026-04-06-at-22.37.41.png"
+      ]
+    },
+    {
+      "name": "dutc",
+      "folder": "dutc",
+      "images": [
+        "rack-cart.jpg",
+        "server-cart.jpg",
+        "server-colors.jpg"
+      ]
+    }
+  ]
+}

@@ -13,17 +13,18 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-6 text-sm text-gray-400">
           <a
-            href="#/"
-            onClick={(e) => {
-              const el = document.getElementById('tools')
-              if (el) {
-                e.preventDefault()
-                el.scrollIntoView({ behavior: 'smooth' })
-              }
-            }}
+            href="https://github.com/WindingDuke77/DC-Tools"
+            target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-gray-100 transition-colors"
           >
-            Tools
+            GitHub
+          </a>
+          <a
+            href="#/gallery"
+            className="hover:text-gray-100 transition-colors"
+          >
+            Gallery
           </a>
           <a
             href="#/contributors"
@@ -32,12 +33,17 @@ export default function Navbar() {
             Contributors
           </a>
           <a
-            href="https://github.com/WindingDuke77/DC-Tools"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#/"
+            onClick={(e) => {
+              const el = document.getElementById('tools')
+              if (el) {
+                e.preventDefault()
+                el.scrollIntoView({ behavior: 'smooth' })
+              }
+            }}
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition-colors"
           >
-            GitHub
+            Tools
           </a>
         </div>
       </div>

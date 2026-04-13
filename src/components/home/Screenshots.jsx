@@ -1,26 +1,44 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
-const BASE = 'https://waseku.com/press/Data_Center/images/'
+const BASE = import.meta.env.BASE_URL + 'gallery/'
 
-const images = [
-  { src: `${BASE}4.png`, alt: 'Data Center screenshot 1' },
-  { src: `${BASE}5.png`, alt: 'Data Center screenshot 2' },
-  { src: `${BASE}Screenshot%202026-01-28%20121057.png`, alt: 'Data Center screenshot 3' },
-]
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 export default function Screenshots() {
   const trackRef = useRef(null)
   const offsetRef = useRef(0)
   const rafRef = useRef(null)
-  const speed = 0.5 // pixels per frame (~30px/s at 60fps)
+  const speed = 0.5
+
+  const [images, setImages] = useState([])
+
+  useEffect(() => {
+    fetch(import.meta.env.BASE_URL + 'gallery/manifest.json')
+      .then((r) => r.json())
+      .then((data) => {
+        const all = data.authors.flatMap((a) =>
+          a.images.map((img) => ({
+            src: BASE + a.folder + '/' + img,
+            alt: `Screenshot by ${a.name}`,
+          }))
+        )
+        setImages(shuffle(all))
+      })
+  }, [])
 
   useEffect(() => {
     const track = trackRef.current
-    if (!track) return
+    if (!track || images.length === 0) return
 
     const tick = () => {
       offsetRef.current -= speed
-      // half the track width = one full set of images
       const halfWidth = track.scrollWidth / 2
       if (Math.abs(offsetRef.current) >= halfWidth) {
         offsetRef.current += halfWidth
@@ -31,9 +49,8 @@ export default function Screenshots() {
 
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+  }, [images])
 
-  // Render images twice for seamless wrap
   const allImages = [...images, ...images]
 
   return (
