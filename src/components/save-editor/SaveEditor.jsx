@@ -44,6 +44,7 @@ export default function SaveEditor() {
   const [wallPrice, setWallPrice] = useState(0)
   const [shopUnlocked, setShopUnlocked] = useState(true)
   const [wallsOpened, setWallsOpened] = useState(false)
+  const [tutorialsComplete, setTutorialsComplete] = useState(false)
   const [error, setError] = useState(null)
   const [fileName, setFileName] = useState('')
   const [isDragging, setIsDragging] = useState(false)
@@ -66,6 +67,7 @@ export default function SaveEditor() {
       setWallPrice(Math.round(result.wallPrice))
       setShopUnlocked(result.shopItems.length > 0 && result.shopItems.every(s => s.unlocked))
       setWallsOpened(result.wallsTotal > 0 && result.wallsOpened === result.wallsTotal)
+      setTutorialsComplete(result.activeObjectives === 0)
       setFileName(file.name)
       setOrigValues({
         coins: Math.round(result.coins),
@@ -74,6 +76,7 @@ export default function SaveEditor() {
         wallPrice: Math.round(result.wallPrice),
         shopUnlocked: result.shopItems.length > 0 && result.shopItems.every(s => s.unlocked),
         wallsOpened: result.wallsTotal > 0 && result.wallsOpened === result.wallsTotal,
+        tutorialsComplete: result.activeObjectives === 0,
       })
     } catch (e) {
       setError('Failed to parse save file: ' + e.message)
@@ -118,7 +121,21 @@ export default function SaveEditor() {
     if (preset.lockAll) setShopUnlocked(false)
     if (preset.openAllWalls) setWallsOpened(true)
     if (preset.closeAllWalls) setWallsOpened(false)
+    if (preset.completeTutorials) setTutorialsComplete(true)
   }, [])
+
+  const loadBaseSave = useCallback(async () => {
+    try {
+      setError(null)
+      const resp = await fetch(`${import.meta.env.BASE_URL}base.save`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const ab = await resp.arrayBuffer()
+      const file = new File([ab], 'base.save', { type: 'application/octet-stream' })
+      loadFile(file)
+    } catch (e) {
+      setError('Failed to load base save: ' + e.message)
+    }
+  }, [loadFile])
 
   const downloadModified = useCallback(() => {
     if (!parsed) return
@@ -136,6 +153,11 @@ export default function SaveEditor() {
       else changes.closeAllWalls = true
     }
 
+    // Tutorial objectives — only support clearing them, not re-adding
+    if (tutorialsComplete && !origValues.tutorialsComplete) {
+      changes.completeTutorials = true
+    }
+
     const modified = modifySave(parsed, changes)
     const blob = new Blob([modified], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
@@ -144,7 +166,7 @@ export default function SaveEditor() {
     a.download = fileName ? fileName.replace(/\.save$/, '_modified.save') : 'modified.save'
     a.click()
     URL.revokeObjectURL(url)
-  }, [parsed, coins, xp, reputation, wallPrice, shopUnlocked, wallsOpened, origValues, fileName])
+  }, [parsed, coins, xp, reputation, wallPrice, shopUnlocked, wallsOpened, tutorialsComplete, origValues, fileName])
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
@@ -258,6 +280,18 @@ export default function SaveEditor() {
           )}
         </div>
 
+        {!parsed && (
+          <div className="text-center mb-6 -mt-2">
+            <span className="text-gray-500 text-sm">Don't have a save file? </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); loadBaseSave() }}
+              className="text-sm text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline transition-colors"
+            >
+              Start from a base save
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-900/30 border border-red-800 rounded-lg p-3 mb-6 text-red-300 text-sm">
             {error}
@@ -332,7 +366,19 @@ export default function SaveEditor() {
                   enabled={wallsOpened}
                   onToggle={() => setWallsOpened(!wallsOpened)}
                 />
+                <ToggleButton
+                  label={tutorialsComplete
+                    ? 'Tutorials Complete'
+                    : `Tutorials Active (${parsed.activeObjectives})`}
+                  enabled={tutorialsComplete}
+                  onToggle={() => setTutorialsComplete(!tutorialsComplete)}
+                />
               </div>
+              {tutorialsComplete && !origValues.tutorialsComplete && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Tutorial objectives will be cleared on save. Note: this is one-way — toggling off does not restore them.
+                </p>
+              )}
             </div>
 
             {/* Download */}
